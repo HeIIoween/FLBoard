@@ -492,6 +492,7 @@ namespace raincious
 					DataItem queueItem;
 					clock_t currentTime = clock();
 					Queue opearatingQueue, emptyQueue;
+					uint addedItems = 0;
 
 					if ((ulong)currentTime < (ulong)server.lastSent + server.Delay)
 					{
@@ -535,14 +536,17 @@ namespace raincious
 								value[Encode::UTF8Encode(valueIterator->first)] =
 									Encode::UTF8Encode(valueIterator->second);
 							}
+
 							item[Encode::UTF8Encode(itemIterator->first)] = value;
+							addedItems++;
 						}
+
 						items.append(item);
 
 						opearatingQueue.pop();
 					}
 
-					if (items.empty())
+					if (items.empty() || addedItems <= 0)
 					{
 						return NO_TASK;
 					}
