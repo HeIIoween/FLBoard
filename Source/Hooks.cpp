@@ -52,6 +52,14 @@ EXPORT void LoadSettings()
 				{
 					login.Secret = stoi(ini.get_value_string(0));
 				}
+				else if (ini.is_value("Operation"))
+				{
+					login.Operations.push_back(ini.get_value_string(0));
+				}
+				else if (ini.is_value("Response"))
+				{
+					login.Responses.push_back(ini.get_value_string(0));
+				}
 			}
 
 			if (login.URI == "" || login.Account == "" || login.Password == "") {

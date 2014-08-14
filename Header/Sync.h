@@ -43,7 +43,7 @@ namespace raincious
 				typedef map <string, DataValue> DataItem;
 
 				typedef map <string, DataValue> Responses;
-				typedef map <string, wstring> ResponseValue;
+				typedef map <wstring, wstring> ResponseValue;
 
 				typedef struct APIResponseTask
 				{
@@ -59,6 +59,8 @@ namespace raincious
 					string Account = "";
 					string Password = "";
 					long Secret = 0;
+					vector <string> Operations;
+					vector <string> Responses;
 				} apiLogin;
 
 				typedef struct APIServer
@@ -117,6 +119,9 @@ namespace raincious
 					APIResponseStatus sendQueue(APIResponses* responses);
 
 					APIResponseStatus sync(Json::Value root, APIResponses* responses, bool noRetry = false);
+
+					bool isTaskAllowsResponse(string taskType);
+					bool isAllowedSendOperate(string reqeustType);
 				};
 
 				class Listener

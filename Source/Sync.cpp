@@ -287,6 +287,38 @@ namespace raincious
 					return SUCCEED;
 				}
 
+				bool Client::isTaskAllowsResponse(string taskType)
+				{
+					// Allows when not set any
+					if (loginInfo.Responses.empty()) {
+						return true;
+					}
+
+					// So it has set, allow it
+					if (find(loginInfo.Responses.begin(), loginInfo.Responses.end(), taskType) != loginInfo.Responses.end())
+					{
+						return true;
+					}
+
+					return false;
+				}
+
+				bool Client::isAllowedSendOperate(string reqeustType)
+				{
+					// Allows when not set any
+					if (loginInfo.Operations.empty()) {
+						return true;
+					}
+
+					// So it has set, allow it
+					if (find(loginInfo.Operations.begin(), loginInfo.Operations.end(), reqeustType) != loginInfo.Operations.end())
+					{
+						return true;
+					}
+
+					return false;
+				}
+
 				APIResponseStatus Client::sync(Json::Value root, APIResponses* responses, bool noRetry)
 				{
 					Json::Value sendParameter;
@@ -380,6 +412,13 @@ namespace raincious
 					}
 
 					size_t taskSize = responseRoot["Tasks"].size();
+
+					// We only fetch this number tops
+					if (taskSize > SYNC_CLIENT_MAX_QUEUE)
+					{
+						taskSize = SYNC_CLIENT_MAX_QUEUE;
+					}
+
 					for (size_t taskLoop = 0; taskLoop < taskSize; taskLoop++)
 					{
 						APIResponseTask responseTask;
@@ -392,6 +431,11 @@ namespace raincious
 						}
 
 						responseType = JsonHelper::GetValueStr(responseRoot["Tasks"][taskLoop], "Type");
+
+						if (!isTaskAllowsResponse(responseType))
+						{
+							continue;
+						}
 
 						if (responseType == "")
 						{
@@ -412,7 +456,7 @@ namespace raincious
 						{
 							string dataKey = dataIter->c_str();
 
-							responseTask.Data[dataKey] =
+							responseTask.Data[Encode::UTF8Decode(dataKey)] =
 								Encode::UTF8Decode(JsonHelper::GetValueStr(responseData, dataIter->c_str()));
 						}
 
@@ -427,7 +471,6 @@ namespace raincious
 				void Client::addQueue(DataItem data)
 				{
 					uint qLength = 0;
-					DataItem item;
 
 					InitializeCriticalSection(&queueSycLock);
 
@@ -482,6 +525,10 @@ namespace raincious
 
 						for (itemIterator = queueItem.begin(); itemIterator != queueItem.end(); itemIterator++)
 						{
+							if (!isAllowedSendOperate(itemIterator->first)) {
+								continue;
+							}
+
 							Json::Value value;
 							for (valueIterator = itemIterator->second.begin(); valueIterator != itemIterator->second.end(); valueIterator++)
 							{
