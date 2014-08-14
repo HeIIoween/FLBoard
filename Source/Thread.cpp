@@ -41,8 +41,6 @@ namespace raincious
 				{
 					_shutdown = false;
 
-					Common::PrintConInfo(L"!! Starting new thread...");
-
 					this->thread = (HANDLE)_beginthreadex(0, 0, &Worker::Thread, NULL, 0, NULL);
 
 					CloseHandle(this->thread);

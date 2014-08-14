@@ -14,8 +14,6 @@ EXPORT void LoadSettings()
 
 	returncode = DEFAULT_RETURNCODE;
 
-	Common::PrintConInfo(L"LoadSettings");
-
 	char szCurDir[MAX_PATH];
 	GetCurrentDirectory(sizeof(szCurDir), szCurDir);
 	string scPluginCfgFile = string(szCurDir) + "\\flhook_plugins\\board.cfg";
@@ -76,8 +74,6 @@ EXPORT void LoadSettings()
 	}
 
 	Config::Container::Set(config);
-
-	Common::PrintConInfo(L"Loading loaded");
 
 	Thread::Worker::Start();
 }
