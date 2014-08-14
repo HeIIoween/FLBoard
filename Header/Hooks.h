@@ -1,0 +1,1 @@
+EXPORT void LoadSettings();

@@ -1,0 +1,171 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\project-vc12\packages\openssl.1.0.1.24\build\native\openssl.props" Condition="Exists('..\..\project-vc12\packages\openssl.1.0.1.24\build\native\openssl.props')" />
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{029FCA5D-4287-44DD-8CA2-67618888BD2B}</ProjectGuid>
+    <RootNamespace>Board Plugin</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>12.0.21005.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>Debug\</OutDir>
+    <IntDir>Debug\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>Header;..\..\project-vc12\packages\libiconv.1.14.0.11\build\native\include;$(SolutionDir)..\plugins\flhookplugin_sdk\headers;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>Release\</OutDir>
+    <IntDir>Release\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>Header;..\..\project-vc12\packages\libiconv.1.14.0.11\build\native\include;$(SolutionDir)..\plugins\flhookplugin_sdk\headers;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <TargetName>board</TargetName>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <Linkage-curl>
+    </Linkage-curl>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <CustomBuildStep>
+      <Command>copy /Y $(OutDir)$(TargetName).dll  ..\..\bin-vc12\flhook_plugins\</Command>
+      <Outputs>..\..\bin-vc12\flhook_plugins\$(TargetName).dll;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\flhookplugin_sdk\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>true</MinimalRebuild>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)$(TargetName).dll</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Windows</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <CustomBuildStep>
+      <Command>copy /Y $(OutDir)$(TargetName).dll  ..\..\bin-vc12\flhook_plugins\</Command>
+      <Outputs>..\..\bin-vc12\flhook_plugins\$(TargetName).dll;..\..\bin-vc12\flhook_plugins\$(TargetName).pdb;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <ClCompile>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <PrecompiledHeader />
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Full</Optimization>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention />
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalLibraryDirectories>..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\lib\Win32\v110\Release;..\..\project-vc12\packages\curl.7.30.0.2\build\native\lib\v110\Win32\Release\dynamic;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcurl.lib;jsoncpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <PostBuildEvent>
+      <Command />
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\project-vc12\FLHook.vcxproj">
+      <Project>{fe6eb3c9-da22-4492-aec3-068c9553a623}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Common.cpp" />
+    <ClCompile Include="Source\Config.cpp" />
+    <ClCompile Include="Source\Event.cpp" />
+    <ClCompile Include="Source\Hooks.cpp" />
+    <ClCompile Include="Source\Http.cpp" />
+    <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\Misc.cpp" />
+    <ClCompile Include="Source\Plugin.cpp" />
+    <ClCompile Include="Source\Sync.cpp" />
+    <ClCompile Include="Source\Thread.cpp" />
+    <ClCompile Include="Source\Verify.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Header\Common.h" />
+    <ClInclude Include="Header\Config.h" />
+    <ClInclude Include="Header\Event.h" />
+    <ClInclude Include="Header\Hooks.h" />
+    <ClInclude Include="Header\Http.h" />
+    <ClInclude Include="Header\Misc.h" />
+    <ClInclude Include="Header\Plugin.h" />
+    <ClInclude Include="Header\Sync.h" />
+    <ClInclude Include="Header\Thread.h" />
+    <ClInclude Include="Header\Verify.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\..\project-vc12\packages\zlib.redist.1.2.8.6\build\native\zlib.redist.targets" Condition="Exists('..\..\project-vc12\packages\zlib.redist.1.2.8.6\build\native\zlib.redist.targets')" />
+    <Import Project="..\..\project-vc12\packages\zlib.1.2.8.6\build\native\zlib.targets" Condition="Exists('..\..\project-vc12\packages\zlib.1.2.8.6\build\native\zlib.targets')" />
+    <Import Project="..\..\project-vc12\packages\openssl.redist.1.0.1.24\build\native\openssl.redist.targets" Condition="Exists('..\..\project-vc12\packages\openssl.redist.1.0.1.24\build\native\openssl.redist.targets')" />
+    <Import Project="..\..\project-vc12\packages\openssl.1.0.1.24\build\native\openssl.targets" Condition="Exists('..\..\project-vc12\packages\openssl.1.0.1.24\build\native\openssl.targets')" />
+    <Import Project="..\..\project-vc12\packages\libssh2.redist.1.4.3.3\build\native\libssh2.redist.targets" Condition="Exists('..\..\project-vc12\packages\libssh2.redist.1.4.3.3\build\native\libssh2.redist.targets')" />
+    <Import Project="..\..\project-vc12\packages\libssh2.1.4.3.3\build\native\libssh2.targets" Condition="Exists('..\..\project-vc12\packages\libssh2.1.4.3.3\build\native\libssh2.targets')" />
+    <Import Project="..\..\project-vc12\packages\curl.redist.7.30.0.2\build\native\curl.redist.targets" Condition="Exists('..\..\project-vc12\packages\curl.redist.7.30.0.2\build\native\curl.redist.targets')" />
+    <Import Project="..\..\project-vc12\packages\curl.7.30.0.2\build\native\curl.targets" Condition="Exists('..\..\project-vc12\packages\curl.7.30.0.2\build\native\curl.targets')" />
+    <Import Project="..\..\project-vc12\packages\jsoncpp.redist.0.6.0.1\build\native\jsoncpp.redist.targets" Condition="Exists('..\..\project-vc12\packages\jsoncpp.redist.0.6.0.1\build\native\jsoncpp.redist.targets')" />
+    <Import Project="..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\jsoncpp.targets" Condition="Exists('..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\jsoncpp.targets')" />
+  </ImportGroup>
+</Project>

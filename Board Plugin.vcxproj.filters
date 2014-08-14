@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Source\Common.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Config.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Event.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Hooks.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Misc.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Plugin.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Sync.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Thread.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Verify.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Header\Common.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Config.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Event.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Hooks.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Http.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Misc.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Plugin.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Sync.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Thread.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Verify.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source">
+      <UniqueIdentifier>{aaa6b2c6-5f7d-4ef8-8542-abfde4eb4887}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header">
+      <UniqueIdentifier>{744292fa-57ff-4b0a-9ad9-35c3beb7597c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
