@@ -1,0 +1,40 @@
+﻿生成启动时间为 2014/8/14 22:42:07。
+     1>项目“D:\Users\Rain Lee\Desktop\FLHook 1.6.2\plugins\board\Board Plugin.vcxproj”在节点 3 上(Rebuild 个目标)。
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /I"D:\Users\Rain Lee\Desktop\FLHook 1.6.2\project-vc12\packages\jsoncpp.0.6.0.1\build\native\../..//build/native/include/" /I"D:\Users\Rain Lee\Desktop\FLHook 1.6.2\project-vc12\packages\curl.7.30.0.2\build\native\../..//build/native/include/" /I"D:\Users\Rain Lee\Desktop\FLHook 1.6.2\project-vc12\packages\libssh2.1.4.3.3\build\native\../..//build/native/include/" /I"D:\Users\Rain Lee\Desktop\FLHook 1.6.2\project-vc12\packages\openssl.1.0.1.24\build\native\../..//build/native/include/" /I"D:\Users\Rain Lee\Desktop\FLHook 1.6.2\project-vc12\packages\zlib.1.2.8.6\build\native\../..//build/native/include/" /Zi /nologo /W3 /WX- /Ox /Oy- /D JSON_DLL_BUILD /D HAS_LIBCURL /D ZLIB_DLL /D HAS_ZLIB /D _VC80_UPGRADE=0x0710 /D _USING_V110_SDK71_ /D _WINDLL /D _MBCS /Gm- /EHa /MD /GS /fp:precise /Zc:wchar_t- /Zc:forScope /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt Source\Common.cpp Source\Config.cpp Source\Event.cpp Source\Hooks.cpp Source\Http.cpp Source\Main.cpp Source\Misc.cpp Source\Plugin.cpp Source\Sync.cpp Source\Thread.cpp Source\Verify.cpp
+         Common.cpp
+         Config.cpp
+         Event.cpp
+         Hooks.cpp
+         Http.cpp
+         Main.cpp
+         Misc.cpp
+         Plugin.cpp
+         Sync.cpp
+         Thread.cpp
+         Verify.cpp
+         正在生成代码...
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"Release\board.dll" /INCREMENTAL:NO /NOLOGO /LIBPATH:"..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\lib\Win32\v110\Release" /LIBPATH:"..\..\project-vc12\packages\curl.7.30.0.2\build\native\lib\v110\Win32\Release\dynamic" libcurl.lib jsoncpp.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"Release\board.pdb" /SUBSYSTEM:WINDOWS,"5.01" /OPT:REF /OPT:ICF /TLBID:1 /DYNAMICBASE:NO /IMPLIB:"Release\board.lib" /MACHINE:X86 /SAFESEH /DLL Release\Common.obj
+         Release\Config.obj
+         Release\Event.obj
+         Release\Hooks.obj
+         Release\Http.obj
+         Release\Main.obj
+         Release\Misc.obj
+         Release\Plugin.obj
+         Release\Sync.obj
+         Release\Thread.obj
+         Release\Verify.obj
+         "D:\Users\Rain Lee\Desktop\FLHook 1.6.2\project-vc12\Release\FLHook.lib"
+            正在创建库 Release\board.lib 和对象 Release\board.exp
+         Board Plugin.vcxproj -> D:\Users\Rain Lee\Desktop\FLHook 1.6.2\plugins\board\Release\board.dll
+       CustomBuildStep:
+         copy /Y Release\board.dll  ..\..\bin-vc12\flhook_plugins\
+         :VCEnd
+         已复制         1 个文件。
+     1>已完成生成项目“D:\Users\Rain Lee\Desktop\FLHook 1.6.2\plugins\board\Board Plugin.vcxproj”(Rebuild 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:52.01
