@@ -486,9 +486,10 @@ namespace raincious
 					size_t taskSize = responseRoot["Tasks"].size();
 
 					// We only fetch this number tops
-					if (taskSize > SYNC_CLIENT_MAX_QUEUE)
+					// Notice this number is limited by SYNC_CLIENT_MAX_QUEUE when reading server info
+					if (taskSize > server.QueueLimit)
 					{
-						taskSize = SYNC_CLIENT_MAX_QUEUE;
+						taskSize = server.QueueLimit;
 					}
 
 					for (size_t taskLoop = 0; taskLoop < taskSize; taskLoop++)
@@ -702,9 +703,10 @@ namespace raincious
 
 				void Listener::Run(Sync::APIResponsePackage &package)
 				{
+					uint listenerCalls = 0;
 					double startTime = 0, finishTime = 0; // Can't use clock_t, or you get X000ms
 					APIResponses::iterator responsesIter;
-					wstringstream wss;
+					wstringstream wss, wsss;
 
 					printError(L"Calling response handlers");
 
@@ -715,13 +717,18 @@ namespace raincious
 						Data::Parameter parameter(responsesIter->Data);
 
 						trigger(package.API, responsesIter->Type, parameter);
+						listenerCalls++;
 					}
 
 					finishTime = clock();
 
-					wss << (((finishTime - startTime) / CLOCKS_PER_SEC) * 1000);
+					wss << L"All ";
+					wss << listenerCalls;
+					wss << L" handlers finished in ";
+					wss << (((finishTime - startTime) / CLOCKS_PER_SEC) * 1000) - (listenerCalls * 100); // -100 for sleep time cost
+					wss << L"ms";
 
-					printError(L"All handlers finished in " + wss.str() + L"ms");
+					printError(wss.str());
 
 					return;
 				}
