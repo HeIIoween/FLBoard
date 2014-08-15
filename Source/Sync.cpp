@@ -741,6 +741,9 @@ namespace raincious
 
 						(*eHandlerIter)(source, response);
 
+						// We in thread, so we can sleep a little, let CPU do some other things.
+						Sleep(100);
+
 						printError(L"- Fired");
 					}
 				}
