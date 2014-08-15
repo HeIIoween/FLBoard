@@ -384,7 +384,7 @@ namespace raincious
 					// Check if server is available
 					if (!enabled)
 					{
-						printError(L"Disabled, no synchronizing");
+						printError(L"Disabled, no synchronizing. Data dropped.");
 
 						return DISABLED;
 					}
@@ -394,7 +394,7 @@ namespace raincious
 					{
 						skips--;
 
-						printError(L"Skiped, no synchronizing");
+						printError(L"Skipped, no synchronizing. Data dropped.");
 
 						return SKIPED;
 					}
@@ -422,7 +422,7 @@ namespace raincious
 					case 403:
 						if (noRetry)
 						{
-							printError(L"Synchronizing, but token not work any more, tried relogin but failed. Dropped.");
+							printError(L"Synchronizing, but token not working any more, tried relogin but failed. Dropped.");
 
 							return FAILED_LOGIN;
 						}
