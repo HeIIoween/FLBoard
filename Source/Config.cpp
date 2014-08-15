@@ -11,9 +11,10 @@ namespace raincious
 			namespace Config
 			{
 				bool Config::Debug = false;
+
 				bool Container::_inited = false;
 
-				Config* Container::settings;
+				Configs Container::settings;
 
 				bool Container::Set(Config* config)
 				{
@@ -23,34 +24,23 @@ namespace raincious
 					{
 						atexit(Release);
 					}
-					else
-					{
-						delete settings;
-					}
 
 					_inited = true;
-					settings = config;
+					settings.push_back(config);
 
 					return true;
 				}
 
 				void Container::Release()
 				{
+					Configs::iterator sIter;
+
 					if (_inited) {
-						delete settings;
+						for (sIter = settings.begin(); sIter != settings.end(); sIter++)
+						{
+							delete (*sIter);
+						}
 					}
-				}
-
-				Config* Container::Get()
-				{
-					if (!_inited) {
-						settings = new Config();
-						_inited = true;
-
-						return settings;
-					}
-
-					return settings;
 				}
 			}
 		}

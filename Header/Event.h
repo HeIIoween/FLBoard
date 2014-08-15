@@ -26,6 +26,9 @@ namespace raincious
 
 				// Request data sync to available APIs acordding to setting
 				EXPORT void Send(string type, EventData data);
+
+				// Import another API plugin's configuration
+				EXPORT void Import(string scPluginCfgFile, bool emptyFail = true);
 			}
 		}
 	}

@@ -25,17 +25,17 @@ namespace raincious
 					static bool Debug;
 				};
 
+				typedef vector <Config*> Configs;
+
 				class Container
 				{
 				public:
 					static bool Set(Config* config);
-					static Config* Get();
 					static void Release();
 
 				protected:
 					static bool _inited;
-
-					static Config* settings;
+					static Configs settings;
 				};
 			}
 		}

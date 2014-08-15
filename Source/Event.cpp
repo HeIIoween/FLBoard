@@ -1,5 +1,7 @@
 #include "Event.h"
-#include "Sync.h"
+#include "Config.h"
+#include "Common.h"
+#include "Misc.h"
 
 using namespace raincious::FLHookPlugin::Board;
 
@@ -31,6 +33,79 @@ namespace raincious
 					item[type] = value;
 
 					Sync::Client::Send(item);
+				}
+
+				EXPORT void Import(string scPluginCfgFile, bool emptyFail)
+				{
+					int boardIndex = 0;
+					string boardIndexStr = "";
+
+					INI_Reader ini;
+					if (!ini.open(scPluginCfgFile.c_str(), false)) {
+						Common::PrintConInfo(L"Can't read config file. Don't see any possibility to load. Aborted.", true);
+
+						return;
+					}
+
+					Config::Config* config = new Config::Config();
+
+					while (ini.read_header())
+					{
+						if (ini.is_header("API"))
+						{
+							Sync::APILogin login;
+							boardIndex++;
+
+							while (ini.read_value())
+							{
+								if (ini.is_value("URI"))
+								{
+									login.URI = ini.get_value_string(0);
+								}
+								else if (ini.is_value("Account"))
+								{
+									login.Account = ini.get_value_string(0);
+								}
+								else if (ini.is_value("Password"))
+								{
+									login.Password = ini.get_value_string(0);
+								}
+								else if (ini.is_value("Secret"))
+								{
+									login.Secret = Misc::Encode::stringToInt(ini.get_value_string(0));
+								}
+								else if (ini.is_value("Operation"))
+								{
+									login.Operations.push_back(ini.get_value_string(0));
+								}
+								else if (ini.is_value("Response"))
+								{
+									login.Responses.push_back(ini.get_value_string(0));
+								}
+							}
+
+							if (login.URI == "" || login.Account == "" || login.Password == "") {
+								boardIndexStr = itos(boardIndex);
+
+								Common::PrintConInfo(L"There is an error on configuration: At least one of the parameter (URI, Account, Password) is missing for [API] " + wstring(boardIndexStr.begin(), boardIndexStr.end()) + L". Ignoring.\r\n", true);
+
+								continue;
+							}
+
+							config->Clients.push_back(Sync::Client::Get(login));
+						}
+					}
+
+					Config::Container::Set(config);
+
+					ini.close();
+
+					if (emptyFail && boardIndex <= 0)
+					{
+						Common::PrintConInfo(L"No board information. Don't see why loading. Aborted.", true);
+
+						return;
+					}
 				}
 			}
 		}
