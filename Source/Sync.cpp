@@ -634,7 +634,9 @@ namespace raincious
 									Encode::UTF8Encode(valueIterator->second);
 							}
 
-							item[Encode::UTF8Encode(itemIterator->first)] = value;
+							item["Type"] = Encode::UTF8Encode(itemIterator->first);
+							item["Data"] = value;
+
 							addedItems++;
 						}
 
