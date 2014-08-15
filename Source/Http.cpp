@@ -43,7 +43,11 @@ namespace raincious
 
 				Http::Http(string target)
 				{
+					headers = NULL;
 					serverAddress = target;
+
+					lastResponse = "";
+					lastStatusCode = 0;
 
 					curl = curl_easy_init();
 
@@ -51,7 +55,7 @@ namespace raincious
 					curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
 					curl_easy_setopt(curl, CURLOPT_VERBOSE, false);
 					curl_easy_setopt(curl, CURLOPT_HEADER, false);
-					curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
+					curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5);
 					curl_easy_setopt(curl, CURLOPT_USERAGENT, CLIENT_USER_AGENT);
 				}
 
@@ -167,7 +171,7 @@ namespace raincious
 
 					switch (currentMethod)
 					{
-					case Method::HTTP_GET:
+					case HTTP_GET_METHOD:
 						queryedSubmit.append(serverAddr);
 
 						if (queryedSubmit.find("/?") != string::npos)
@@ -185,7 +189,7 @@ namespace raincious
 						curl_easy_setopt(curl, CURLOPT_HTTPGET, true);
 						break;
 
-					case Method::HTTP_POST:
+					case HTTP_POST_METHOD:
 						curl_easy_setopt(curl, CURLOPT_URL, serverAddr);
 						curl_easy_setopt(curl, CURLOPT_POST, true);
 						curl_easy_setopt(curl, CURLOPT_POSTFIELDS, queryString.c_str());
@@ -234,7 +238,7 @@ namespace raincious
 				{
 					http = Http::Create(url);
 
-					http->setMethod(Http::method::HTTP_GET);
+					http->setMethod(HTTP_GET_METHOD);
 				}
 
 				Get::~Get()
@@ -247,7 +251,7 @@ namespace raincious
 				{
 					http = Http::Create(url);
 
-					http->setMethod(Http::method::HTTP_POST);
+					http->setMethod(HTTP_POST_METHOD);
 				}
 
 				Post::~Post()

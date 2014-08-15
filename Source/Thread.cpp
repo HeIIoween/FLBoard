@@ -6,6 +6,8 @@
 #include "Thread.h"
 #include "Sync.h"
 
+#include "../../flhookplugin_sdk/headers/FLHook.h"
+
 using namespace raincious::FLHookPlugin::Board;
 
 namespace raincious
@@ -77,24 +79,31 @@ namespace raincious
 						}
 						else
 						{
-							Sync::Listener::Run(package);
-
 							failedLoop = false;
+
+							try
+							{
+								Sync::Listener::Run(package);
+							}
+							catch(...)
+							{
+								AddLog("[Board] At least one response call back ran and failed.");
+							}
 						}
 
 						endTime = clock();
 
 						currentDelay = (endTime - startTime) / (CLOCKS_PER_SEC / 1000);
 
-						if (!failedLoop)
+						if (!failedLoop) // If loop is succeed (Sync got and send), we can go faster (or better avg)
 						{
-							sleep = (currentDelay + lastDelay) / 2;
+							sleep = (int)((currentDelay + lastDelay) / 2);
 
 							lastDelay = currentDelay;
 						}
-						else
+						else // If not (Sync failed or not send), go slower
 						{
-							sleep *= 2;
+							sleep += currentDelay + 1;
 
 							lastDelay = sleep;
 						}

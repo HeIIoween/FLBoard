@@ -10,7 +10,7 @@ namespace raincious
 		{
 			namespace Common
 			{
-				void PrintConInfo(wstring message);
+				void PrintConInfo(wstring message, bool force = false);
 			}
 		}
 	}

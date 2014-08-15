@@ -2,11 +2,13 @@
 #include "Hooks.h"
 #include "Thread.h"
 #include "Config.h"
-#include "Event.h"
 #include "Common.h"
+#include "Misc.h"
 
 using namespace std;
 using namespace raincious::FLHookPlugin::Board;
+
+bool bGlobalDebug;
 
 EXPORT void LoadSettings()
 {
@@ -50,7 +52,7 @@ EXPORT void LoadSettings()
 				}
 				else if (ini.is_value("Secret"))
 				{
-					login.Secret = stoi(ini.get_value_string(0));
+					login.Secret = Misc::Encode::stringToInt(ini.get_value_string(0));
 				}
 				else if (ini.is_value("Operation"))
 				{
@@ -69,6 +71,16 @@ EXPORT void LoadSettings()
 			}
 
 			config->Clients.push_back(Sync::Client::Get(login));
+		}
+		else if (ini.is_header("General"))
+		{
+			while (ini.read_value())
+			{
+				if (ini.is_value("Debug"))
+				{
+					Config::Config::Debug = ini.get_value_bool(0);
+				}
+			}
 		}
 	}
 

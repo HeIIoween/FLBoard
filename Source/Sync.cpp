@@ -1,3 +1,7 @@
+#pragma warning (disable: 4503)
+
+#include <sstream>
+
 #include "Sync.h"
 #include "Misc.h"
 #include "Common.h"
@@ -70,6 +74,15 @@ namespace raincious
 					string loginErrorMessage;
 					APIResponseStatus loginResponse;
 
+					server.Token = "";
+					server.Delay = 0;
+					server.Name = L"";
+					server.QueueLimit = 0;
+					server.LastSent = 0;
+
+					enabled = false;
+					skips = 0;
+
 					loginInfo = client;
 					
 					verifyer.key(loginInfo.Secret);
@@ -111,16 +124,10 @@ namespace raincious
 						message.append(wstring(loginInfo.URI.begin(), loginInfo.URI.end()));
 						message.append(L".");
 
-						Common::PrintConInfo(message);
+						Common::PrintConInfo(message, true);
 					}
 					else
 					{
-						message.append(L"Connection to ");
-						message.append(wstring(loginInfo.URI.begin(), loginInfo.URI.end()));
-						message.append(L" has been established.");
-
-						Common::PrintConInfo(message);
-
 						enabled = true;
 					}
 				}
@@ -128,6 +135,24 @@ namespace raincious
 				Client::~Client()
 				{
 					logoff();
+				}
+
+				void Client::printError(wstring error)
+				{
+					wstring message = L"[Synchronizing " + (server.Name) + L"] " + error + L" <";
+
+					message.append(L"Delay: ");
+					message.append(Encode::stringToWstring(itos(server.Delay)));
+
+					message.append(L", Queue: ");
+					message.append(Encode::stringToWstring(itos(server.QueueLimit)));
+
+					message.append(L", Addr: ");
+					message.append(wstring(loginInfo.URI.begin(), loginInfo.URI.end()));
+
+					message.append(L">");
+
+					Common::PrintConInfo(message);
 				}
 
 				void Client::setJsonCommonHeader(Http::HttpHandler& http)
@@ -160,35 +185,46 @@ namespace raincious
 					// Server not return the right status
 					if (http.status() != 200)
 					{
+						printError(L"Bad HTTP status on Login");
+
 						return FAILED_STATUS;
 					}
 
 					// Server returns invalid content format
 					if (!responseReader.parse(result, responseRoot))
 					{
+						printError(L"Invalid response on login");
+
 						return INVALID_RESPONSE;
 					}
 
 					if (!verifyer.pair(loginParameter["Cecret"].asInt(), JsonHelper::GetValueInt(responseRoot, "Cecret")))
 					{
+						printError(L"Invalid secret response on login");
+
 						return INVALID_SECERT;
 					}
 
 					if (JsonHelper::GetValueStr(responseRoot, "Ack") != loginParameter["Task"].asString())
 					{
+						printError(L"Invalid acknowledge response on login");
+
 						return INVALID_ACK;
 					}
 
 					// Get server error information
-					if (JsonHelper::GetValueStr(responseRoot, "Error") != "")
+
+					errorMessage = JsonHelper::GetValueStr(responseRoot, "Error");
+					if (errorMessage != "")
 					{
-						errorMessage = JsonHelper::GetValueStr(responseRoot, "Error");
+						printError(L"Server error:" + wstring(errorMessage.begin(), errorMessage.end()));
 
 						return ERROR_MESSAGE;
 					}
 
 					server.Token = JsonHelper::GetValueStr(responseRoot, "Token");
 
+					// Actuall, use a string node on all integer and numbers, bools
 					server.Delay = JsonHelper::GetValueUint(
 						responseRoot, "Delay") * 1000; // Server can only return seconds
 
@@ -199,9 +235,13 @@ namespace raincious
 					server.QueueLimit = JsonHelper::GetValueUint(
 						responseRoot, "Queue");
 
+					server.LastSent = clock();
+
 					// API Server not returning valid token
 					if (server.Token == "")
 					{
+						printError(L"Returning invalid token");
+
 						return INVALID_TOKEN;
 					}
 
@@ -213,30 +253,34 @@ namespace raincious
 					}
 
 					// API Server delay time
-					if (server.Delay < 0)
+					if (server.Delay <= 0)
 					{
+						printError(L"Delay " + Encode::stringToWstring(itos(server.Delay)) + L" is invalid, using default");
+
 						server.Delay = SYNC_CLIENT_MAX_DELAY;
 					}
-					else
+					else if (server.Delay > SYNC_CLIENT_MAX_DELAY)
 					{
-						if (server.Delay > SYNC_CLIENT_MAX_DELAY)
-						{
-							server.Delay = SYNC_CLIENT_MAX_DELAY;
-						}
+						printError(L"Delay " + Encode::stringToWstring(itos(server.Delay)) + L" greater than limit, using limit as maximum");
+
+						server.Delay = SYNC_CLIENT_MAX_DELAY;
 					}
 
 					// API Server delay time
 					if (server.QueueLimit <= 0)
 					{
+						printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" is invalid, using default");
+
 						server.QueueLimit = SYNC_CLIENT_DEFAULT_QUEUE;
 					}
-					else
+					else if (server.QueueLimit > SYNC_CLIENT_MAX_QUEUE)
 					{
-						if (server.QueueLimit > SYNC_CLIENT_MAX_QUEUE)
-						{
-							server.QueueLimit = SYNC_CLIENT_MAX_QUEUE;
-						}
+						printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using limit as maximum");
+
+						server.QueueLimit = SYNC_CLIENT_MAX_QUEUE;
 					}
+
+					printError(L"Logged in");
 
 					return SUCCEED;
 				}
@@ -266,23 +310,33 @@ namespace raincious
 
 					if (http.status() != 200)
 					{
+						printError(L"Bad HTTP status on logout");
+
 						return FAILED_STATUS;
 					}
 
 					if (!responseReader.parse(result, responseParameter))
 					{
+						printError(L"Bad response on logout");
+
 						return INVALID_RESPONSE;
 					}
 
 					if (!verifyer.pair(logoffParameter["Cecret"].asInt(), JsonHelper::GetValueInt(responseParameter, "Cecret")))
 					{
+						printError(L"Bad secret response logout");
+
 						return INVALID_SECERT;
 					}
 
 					if (JsonHelper::GetValueStr(responseParameter, "Ack") != logoffParameter["Task"].asString())
 					{
+						printError(L"Bad acknowledge response logout");
+
 						return INVALID_ACK;
 					}
+
+					printError(L"Logged out");
 
 					return SUCCEED;
 				}
@@ -330,6 +384,8 @@ namespace raincious
 					// Check if server is available
 					if (!enabled)
 					{
+						printError(L"Disabled, no synchronizing");
+
 						return DISABLED;
 					}
 
@@ -337,6 +393,8 @@ namespace raincious
 					if (skips > 0)
 					{
 						skips--;
+
+						printError(L"Skiped, no synchronizing");
 
 						return SKIPED;
 					}
@@ -364,6 +422,8 @@ namespace raincious
 					case 403:
 						if (noRetry)
 						{
+							printError(L"Synchronizing, but token not work any more, tried relogin but failed. Dropped.");
+
 							return FAILED_LOGIN;
 						}
 
@@ -380,33 +440,45 @@ namespace raincious
 					default:
 						skips += 5;
 
+						printError(L"Invalid HTTP status on synchronizing");
+
 						return FAILED_STATUS;
 					}
 
 					// Parse response
 					if (!responseReader.parse(result, responseRoot))
 					{
+						printError(L"Invalid response on synchronizing");
+
 						return INVALID_RESPONSE;
 					}
 
 					if (!responseRoot.isObject())
 					{
+						printError(L"Invalid response on synchronizing");
+
 						return INVALID_RESPONSE;
 					}
 
 					if (!verifyer.pair(sendParameter["Cecret"].asInt(), JsonHelper::GetValueInt(responseRoot, "Cecret")))
 					{
+						printError(L"Invalid secret response on synchronizing");
+
 						return INVALID_SECERT;
 					}
 
 					if (JsonHelper::GetValueStr(responseRoot, "Ack") != sendParameter["Task"].asString())
 					{
+						printError(L"Invalid acknowledge response on synchronizing");
+
 						return INVALID_ACK;
 					}
 
 					if (!responseRoot["Tasks"].isArray())
 					{
 						skips += 10;
+
+						printError(L"Invalid task data on synchronizing");
 
 						return INVALID_DATA;
 					}
@@ -427,18 +499,23 @@ namespace raincious
 
 						if (!responseRoot["Tasks"][taskLoop].isObject())
 						{
+							printError(L"Invalid task data item on synchronizing. Skipped.");
+
 							continue;
 						}
 
 						responseType = JsonHelper::GetValueStr(responseRoot["Tasks"][taskLoop], "Type");
 
-						if (!isTaskAllowsResponse(responseType))
+						if (responseType == "")
 						{
+							printError(L"Response task type not set.");
 							continue;
 						}
 
-						if (responseType == "")
+						if (!isTaskAllowsResponse(responseType))
 						{
+							printError(L"Unallowed Response task type " + wstring(responseType.begin(), responseType.end()) + L". Skipped.");
+
 							continue;
 						}
 
@@ -446,6 +523,8 @@ namespace raincious
 
 						if (!responseData.isObject())
 						{
+							printError(L"Invalid response task data. Skipped.");
+
 							continue;
 						}
 
@@ -472,12 +551,21 @@ namespace raincious
 				{
 					uint qLength = 0;
 
+					if (!enabled)
+					{
+						printError(L"Disabled, can't add queue to this API.");
+
+						return;
+					}
+
 					InitializeCriticalSection(&queueSycLock);
 
 					qLength = sendingQueue.size();
 
 					if (qLength > server.QueueLimit)
 					{
+						printError(L"Queue over API server limit. Dropping old.");
+
 						sendingQueue.pop();
 					}
 
@@ -494,19 +582,28 @@ namespace raincious
 					Queue opearatingQueue, emptyQueue;
 					uint addedItems = 0;
 
-					if ((ulong)currentTime < (ulong)server.lastSent + server.Delay)
+					if (!enabled)
 					{
+						printError(L"Disabled, can't send queue to this API server.");
+
+						return DISABLED;
+					}
+
+					if (currentTime < (clock_t)(server.LastSent + server.Delay))
+					{
+						printError(L"Period limit, wait a bit");
+
 						return PERIOD_LIMIT;
 					}
 
-					server.lastSent = currentTime;
+					server.LastSent = currentTime;
 
 					// OK, let me copy this queue so we will get rid of lock problem
 					InitializeCriticalSection(&queueSycLock);
 
 					if (!sendingQueue.empty())
 					{
-						opearatingQueue.swap(sendingQueue);
+						swap(opearatingQueue, sendingQueue);
 						// Now the empty opearatingQueue becomes new sendingQueue
 						// And the sendingQueue becomes new opearatingQueue with datas
 					}
@@ -548,6 +645,8 @@ namespace raincious
 
 					if (items.empty() || addedItems <= 0)
 					{
+						printError(L"No task need to send to this API. Skipped.");
+
 						return NO_TASK;
 					}
 
@@ -601,17 +700,31 @@ namespace raincious
 
 				void Listener::Run(Sync::APIResponsePackage &package)
 				{
+					double startTime = 0, finishTime = 0; // Can't use clock_t, or you get X000ms
 					APIResponses::iterator responsesIter;
+					wstringstream wss;
+
+					printError(L"Calling response handlers");
+
+					startTime = clock();
 
 					for (responsesIter = package.Responses.begin(); responsesIter != package.Responses.end(); responsesIter++)
 					{
-						trigger(package.API, responsesIter->Type, responsesIter->Data);
+						Data::Parameter parameter(responsesIter->Data);
+
+						trigger(package.API, responsesIter->Type, parameter);
 					}
+
+					finishTime = clock();
+
+					wss << (((finishTime - startTime) / CLOCKS_PER_SEC) * 1000);
+
+					printError(L"All handlers finished in " + wss.str() + L"ms");
 
 					return;
 				}
 
-				void Listener::trigger(wstring source, string eventName, ResponseValue response)
+				void Listener::trigger(wstring source, string eventName, Data::Parameter response)
 				{
 					Events::iterator eventIter = events.find(eventName);
 
@@ -622,8 +735,24 @@ namespace raincious
 					EventHandlers::iterator eHandlerIter;
 					for (eHandlerIter = events[eventName].Handlers.begin(); eHandlerIter != events[eventName].Handlers.end(); eHandlerIter++)
 					{
+						printError(L"+ Firing for " + wstring(eventName.begin(), eventName.end()));
+
 						(*eHandlerIter)(source, response);
+
+						printError(L"- Fired");
 					}
+				}
+
+				void Listener::printError(wstring error)
+				{
+					wstring message = L"[Responsing] " + error + L" <";
+
+					message.append(L"Events: ");
+					message.append(Encode::stringToWstring(itos(events.size())));
+
+					message.append(L">");
+
+					Common::PrintConInfo(message);
 				}
 			}
 		}

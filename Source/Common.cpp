@@ -1,4 +1,5 @@
 #include <string>
+#include "Config.h"
 
 #include "..\..\flhookplugin_sdk\headers\FLHook.h"
 
@@ -12,9 +13,12 @@ namespace raincious
 		{
 			namespace Common
 			{
-				void PrintConInfo(wstring message)
+				void PrintConInfo(wstring message, bool force)
 				{
-					ConPrint(L"[Board] " + message + L"\r\n");
+					if (force || Config::Config::Debug)
+					{
+						ConPrint(L"[Board] " + message + L"\r\n");
+					}
 				}
 			}
 		}

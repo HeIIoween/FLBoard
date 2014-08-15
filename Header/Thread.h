@@ -1,4 +1,4 @@
-#define MAX_THREAD_WAITING_TIME 120
+#define MAX_THREAD_WAITING_TIME 30
 
 namespace raincious
 {

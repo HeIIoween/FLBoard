@@ -45,7 +45,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\flhookplugin_sdk\"
+				AdditionalIncludeDirectories="Header;Source;&quot;..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\include&quot;;&quot;..\..\project-vc12\packages\curl.7.30.0.2\build\native\include&quot;;&quot;$(SolutionDir)..\plugins\flhookplugin_sdk\headers\&quot;"
 				MinimalRebuild="true"
 				ExceptionHandling="2"
 				BasicRuntimeChecks="3"
@@ -66,6 +66,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="libcurl.lib jsoncpp.lib"
 				OutputFile="$(OutDir)/board.dll"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
@@ -127,7 +128,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(SolutionDir)..\plugins\flhookplugin_sdk\headers\&quot;"
+				AdditionalIncludeDirectories="Header;Source;&quot;..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\include&quot;;&quot;..\..\project-vc12\packages\curl.7.30.0.2\build\native\include&quot;;&quot;$(SolutionDir)..\plugins\flhookplugin_sdk\headers\&quot;"
 				ExceptionHandling="2"
 				RuntimeLibrary="2"
 				TreatWChar_tAsBuiltInType="false"
@@ -146,8 +147,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="libcurl.lib jsoncpp.lib"
 				OutputFile="$(OutDir)/board.dll"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="&quot;..\..\project-vc12\packages\jsoncpp.0.6.0.1\build\native\lib\Win32\v100\Release&quot;;&quot;..\..\project-vc12\packages\curl.7.30.0.2\build\native\lib\v100\Win32\Release\dynamic&quot;"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -190,11 +193,23 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\Source\Common.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Config.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Event.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\Hooks.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\Http.cpp"
+				RelativePath=".\Source\Http.cpp"
 				>
 			</File>
 			<File
@@ -202,7 +217,27 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Source\Misc.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Parameter.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Source\Plugin.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Sync.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Thread.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Source\Verify.cpp"
 				>
 			</File>
 		</Filter>
@@ -212,15 +247,47 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\Source\Hooks.h"
+				RelativePath=".\Header\Common.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Http.h"
+				RelativePath=".\Header\Config.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Source\Plugin.h"
+				RelativePath=".\Header\Event.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Hooks.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Http.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Misc.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Parameter.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Plugin.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Sync.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Thread.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Header\Verify.h"
 				>
 			</File>
 		</Filter>

@@ -34,6 +34,9 @@
     <ClCompile Include="Source\Verify.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Parameter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Header\Common.h">
@@ -64,6 +67,12 @@
       <Filter>Header</Filter>
     </ClInclude>
     <ClInclude Include="Header\Verify.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Task.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Parameter.h">
       <Filter>Header</Filter>
     </ClInclude>
   </ItemGroup>

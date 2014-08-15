@@ -10,6 +10,8 @@ namespace Misc
 {
 	namespace Encode
 	{
+		int stringToInt(string str);
+
 		wstring stringToWstring(string str);
 		string wstringToString(wstring wstr);
 

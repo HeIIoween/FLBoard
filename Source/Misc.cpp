@@ -9,6 +9,22 @@ namespace Misc
 {
 	namespace Encode
 	{
+		int stringToInt(string str)
+		{
+			char * sChar;
+			const char * s = str.c_str();
+
+			try
+			{
+				return (int)strtol(s, &sChar, 10);
+			}
+			catch(...)
+			{
+			}
+
+			return 0;
+		}
+
 		wstring stringToWstring(string str)
 		{
 			wstringstream wss;
@@ -80,6 +96,11 @@ namespace Misc
 				return value[key].asBool();
 			}
 
+			if (value[key].isString() && value[key].asString() == "yes")
+			{
+				return true;
+			}
+
 			return false;
 		}
 
@@ -92,6 +113,11 @@ namespace Misc
 			if (value[key].isUInt())
 			{
 				return value[key].asUInt();
+			}
+
+			if (value[key].isString())
+			{
+				return (uint)Encode::stringToInt(value[key].asString());
 			}
 
 			return 0;
@@ -110,7 +136,7 @@ namespace Misc
 
 			if (value[key].isString())
 			{
-				return stoi(value[key].asString());
+				return Encode::stringToInt(value[key].asString());
 			}
 
 			return 0;

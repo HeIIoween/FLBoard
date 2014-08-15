@@ -17,16 +17,12 @@ namespace raincious
 				class Config
 				{
 				public:
-					static struct General {
-						wstring URI = L"";
-						wstring Account = L"";
-						wstring Token = L"";
-					} general;
-
 					vector <Sync::Client*> Clients;
 
 					Config() {};
 					~Config() {};
+
+					static bool Debug;
 				};
 
 				class Container

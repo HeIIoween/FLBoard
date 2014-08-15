@@ -10,11 +10,24 @@ namespace raincious
 		{
 			namespace Config
 			{
+				bool Config::Debug = false;
 				bool Container::_inited = false;
+
 				Config* Container::settings;
 
 				bool Container::Set(Config* config)
 				{
+					static bool firstInit = false;
+
+					if (firstInit)
+					{
+						atexit(Release);
+					}
+					else
+					{
+						delete settings;
+					}
+
 					_inited = true;
 					settings = config;
 

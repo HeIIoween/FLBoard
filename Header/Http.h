@@ -70,14 +70,14 @@ namespace raincious
 					}
 				};
 
+				typedef enum Method {
+					HTTP_POST_METHOD,
+					HTTP_GET_METHOD
+				} method;
+
 				class Http
 				{
 				public:
-					typedef enum Method {
-						HTTP_POST,
-						HTTP_GET
-					} method;
-
 					// Creater and Decreater
 					static Http *Create(string target);
 					static void Free(Http* http);
@@ -99,17 +99,17 @@ namespace raincious
 					method currentMethod;
 
 					// curl
-					struct curl_slist *headers = NULL;
+					struct curl_slist *headers;
 
 					// Target url
-					string serverAddress = "";
+					string serverAddress;
 
 					typedef map<string, string> QueryData;
 
 					QueryData addressQuerys;
 
-					string lastResponse = "";
-					long lastStatusCode = 0;
+					string lastResponse;
+					long lastStatusCode;
 
 					Http(string target);
 					~Http();

@@ -3,6 +3,7 @@
 
 #include "Http.h"
 #include "Verify.h"
+#include "Parameter.h"
 
 #include "..\..\flhookplugin_sdk\headers\FLHook.h"
 
@@ -42,12 +43,14 @@ namespace raincious
 				typedef map <string, wstring> DataValue;
 				typedef map <string, DataValue> DataItem;
 
+				typedef void(*EventCallback)(wstring source, Data::Parameter parameter);
+
 				typedef map <string, DataValue> Responses;
 				typedef map <wstring, wstring> ResponseValue;
 
 				typedef struct APIResponseTask
 				{
-					string Type = "";
+					string Type;
 					ResponseValue Data;
 				} apiResponse;
 
@@ -55,21 +58,21 @@ namespace raincious
 
 				typedef struct APILogin
 				{
-					string URI = "";
-					string Account = "";
-					string Password = "";
-					long Secret = 0;
+					string URI;
+					string Account;
+					string Password;
+					long Secret;
 					vector <string> Operations;
 					vector <string> Responses;
 				} apiLogin;
 
 				typedef struct APIServer
 				{
-					string Token = "";
-					wstring Name = L"";
-					uint Delay = 0;
-					clock_t lastSent = 0;
-					uint QueueLimit = 0;
+					string Token;
+					wstring Name;
+					uint Delay;
+					clock_t LastSent;
+					uint QueueLimit;
 				} apiToken;
 
 				typedef struct APIResponsePackage
@@ -77,8 +80,6 @@ namespace raincious
 					APIResponses Responses;
 					wstring API;
 				} apiResponsePackage;
-
-				typedef void(*EventCallback)(wstring api, ResponseValue parameter);
 
 				class Client
 				{
@@ -101,12 +102,12 @@ namespace raincious
 
 					APILogin loginInfo;
 					APIServer server;
-					bool enabled = false;
+					bool enabled;
 
 					Queue sendingQueue;
 					CRITICAL_SECTION queueSycLock;
 
-					uint skips = 0;
+					uint skips;
 
 					static Instances instances;
 
@@ -122,6 +123,8 @@ namespace raincious
 
 					bool isTaskAllowsResponse(string taskType);
 					bool isAllowedSendOperate(string reqeustType);
+
+					void Client::printError(wstring error);
 				};
 
 				class Listener
@@ -141,7 +144,9 @@ namespace raincious
 
 					static Events events;
 
-					static void trigger(wstring source, string eventName, ResponseValue response);
+					static void trigger(wstring source, string eventName, Data::Parameter response);
+
+					static void Listener::printError(wstring error);
 				};
 			}
 		}
