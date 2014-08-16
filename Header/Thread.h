@@ -1,4 +1,8 @@
-#define MAX_THREAD_WAITING_TIME 30
+#include <vector>
+
+#include "../../flhookplugin_sdk/headers/FLHook.h"
+
+#define MAX_THREAD_CLOSE_WAITING_TIME 60000
 
 namespace raincious
 {
@@ -11,19 +15,40 @@ namespace raincious
 				class Worker
 				{
 					public:
-						static Worker* Start();
+						static void Start(uint threads);
 						static void Stop();
+						static void Activate();
 
 					protected:
-						static Worker* _instance;
-						static bool _shutdown;
-						
-						HANDLE thread;
+						typedef vector <Worker*> Instances;
 
-						Worker();
-						~Worker();
+						static bool inited;
+
+						static CRITICAL_SECTION staticOptLock;
 
 						static unsigned __stdcall Thread(void *args);
+
+						static Instances instances;
+
+						CRITICAL_SECTION instanceOptLock;
+
+						typedef struct ThreadData
+						{
+							bool Close;
+							HANDLE WaitEvent;
+							HANDLE Thread;
+						} threadData;
+
+						typedef vector <ThreadData*> ThreadDatas;
+
+						ThreadDatas openedThreads;
+
+						Worker(uint threads);
+						~Worker();
+
+						void wakeUp();
+
+						void printError(wstring error);
 				};
 			}
 		}

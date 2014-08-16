@@ -62,6 +62,7 @@ namespace raincious
 					string Account;
 					string Password;
 					long Secret;
+					uint Queue;
 					vector <string> Operations;
 					vector <string> Responses;
 				} apiLogin;
@@ -81,21 +82,22 @@ namespace raincious
 					wstring API;
 				} apiResponsePackage;
 
+				typedef struct vector <APIResponsePackage> APIResponsePackages;
+
 				class Client
 				{
 				public:
-					static Client* Get(APILogin clientLogin);
+					static APIServer Get(APILogin clientLogin);
 					static void Release();
 					static void Send(DataItem data);
 
-					static bool Run(APIResponsePackage *package);
+					static bool Run(APIResponsePackages *packages);
 
 				protected:
 					typedef vector <Client*> Instances;
-
 					typedef queue <DataItem> Queue;
 
-					Client(APILogin apiLogin);
+					Client(APILogin apiLogin, APIServer &serverInfo);
 					~Client();
 
 					Verify::Simple verifyer;
@@ -105,13 +107,17 @@ namespace raincious
 					bool enabled;
 
 					Queue sendingQueue;
+
 					CRITICAL_SECTION queueSycLock;
+					static CRITICAL_SECTION instanceStaticOptLock;
 
 					uint skips;
 
+					static bool inited;
+
 					static Instances instances;
 
-					APIResponseStatus login(string &errorMessage);
+					APIResponseStatus login(APIServer &serverInfo, string &errorMessage);
 					APIResponseStatus logoff();
 					
 					void setJsonCommonHeader(Http::HttpHandler& http);
@@ -131,12 +137,13 @@ namespace raincious
 				{
 				public:
 					static void Listen(string eventName, EventCallback eventCallback);
-					static void Run(APIResponsePackage &package);
+					static void Run(APIResponsePackages &packages);
 
 				protected:
 					typedef vector <EventCallback> EventHandlers;
 
-					typedef struct EventHandler {
+					typedef struct EventHandler 
+					{
 						EventHandlers Handlers;
 					};
 

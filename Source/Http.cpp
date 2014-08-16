@@ -10,12 +10,14 @@ namespace raincious
 		{
 			namespace Http
 			{
+				bool Http::inited = false;
+
 				Http *Http::Create(string target)
 				{
-					static bool inited = false;
-
 					if (!inited)
 					{
+						inited = true;
+
 						CURLcode initResult = curl_global_init(CURL_GLOBAL_ALL);
 
 						atexit(CleanUp);
@@ -24,8 +26,6 @@ namespace raincious
 						{
 							throw HttpCURLInitException(initResult);
 						}
-
-						inited = true;
 					}
 
 					return new Http(target);
@@ -33,7 +33,13 @@ namespace raincious
 
 				void Http::CleanUp()
 				{
+					if (!inited)
+					{
+						return;
+					}
+					
 					curl_global_cleanup();
+					inited = false;
 				}
 
 				void Http::Free(Http *http)

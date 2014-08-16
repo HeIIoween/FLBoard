@@ -20,6 +20,11 @@ namespace raincious
 						ConPrint(L"[Board] " + message + L"\r\n");
 					}
 				}
+
+				bool DebugPrintEnabled()
+				{
+					return Config::Config::Debug;
+				}
 			}
 		}
 	}

@@ -36,6 +36,8 @@ namespace raincious
 				protected:
 					ParameterData param;
 				};
+
+				typedef vector <Parameter> ParameterSet;
 			}
 		}
 	}

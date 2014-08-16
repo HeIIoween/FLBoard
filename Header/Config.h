@@ -17,25 +17,10 @@ namespace raincious
 				class Config
 				{
 				public:
-					vector <Sync::Client*> Clients;
-
-					Config() {};
-					~Config() {};
-
 					static bool Debug;
-				};
+					static long Threads;
 
-				typedef vector <Config*> Configs;
-
-				class Container
-				{
-				public:
-					static bool Set(Config* config);
-					static void Release();
-
-				protected:
-					static bool _inited;
-					static Configs settings;
+					static Data::ParameterSet APIs;
 				};
 			}
 		}

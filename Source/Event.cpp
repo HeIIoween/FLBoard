@@ -39,6 +39,7 @@ namespace raincious
 				{
 					int boardIndex = 0;
 					string boardIndexStr = "";
+					Data::ParameterSet parameters;
 
 					INI_Reader ini;
 					if (!ini.open(scPluginCfgFile.c_str(), false)) {
@@ -47,13 +48,12 @@ namespace raincious
 						return;
 					}
 
-					Config::Config* config = new Config::Config();
-
 					while (ini.read_header())
 					{
 						if (ini.is_header("API"))
 						{
 							Sync::APILogin login;
+							Sync::APIServer server;
 							boardIndex++;
 
 							while (ini.read_value())
@@ -92,11 +92,22 @@ namespace raincious
 								continue;
 							}
 
-							config->Clients.push_back(Sync::Client::Get(login));
+							server = Sync::Client::Get(login);
+
+							Data::ParameterData data;
+							
+							data[L"Name"] = server.Name;
+							data[L"LastSent"] = (uint)server.LastSent;
+							data[L"Queue"] = server.QueueLimit;
+							data[L"Delay"] = server.Delay;
+
+							Data::Parameter parameter(data);
+
+							parameters.push_back(parameter);
 						}
 					}
 
-					Config::Container::Set(config);
+					Config::Config::APIs = parameters;
 
 					ini.close();
 
@@ -106,6 +117,11 @@ namespace raincious
 
 						return;
 					}
+				}
+
+				EXPORT Data::ParameterSet APIs()
+				{
+					return Config::Config::APIs;
 				}
 			}
 		}

@@ -11,6 +11,7 @@ namespace raincious
 			namespace Common
 			{
 				void PrintConInfo(wstring message, bool force = false);
+				bool DebugPrintEnabled();
 			}
 		}
 	}

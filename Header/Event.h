@@ -29,6 +29,9 @@ namespace raincious
 
 				// Import another API plugin's configuration
 				EXPORT void Import(string scPluginCfgFile, bool emptyFail = true);
+
+				// Get all working API servers
+				EXPORT Data::ParameterSet APIs();
 			}
 		}
 	}

@@ -1,5 +1,7 @@
 #include <process.h>
 
+#include "Common.h"
+#include "Misc.h"
 #include "Config.h"
 
 namespace raincious
@@ -11,37 +13,9 @@ namespace raincious
 			namespace Config
 			{
 				bool Config::Debug = false;
+				long Config::Threads = 0;
 
-				bool Container::_inited = false;
-
-				Configs Container::settings;
-
-				bool Container::Set(Config* config)
-				{
-					static bool firstInit = false;
-
-					if (firstInit)
-					{
-						atexit(Release);
-					}
-
-					_inited = true;
-					settings.push_back(config);
-
-					return true;
-				}
-
-				void Container::Release()
-				{
-					Configs::iterator sIter;
-
-					if (_inited) {
-						for (sIter = settings.begin(); sIter != settings.end(); sIter++)
-						{
-							delete (*sIter);
-						}
-					}
-				}
+				Data::ParameterSet Config::APIs;
 			}
 		}
 	}

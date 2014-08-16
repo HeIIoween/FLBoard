@@ -1,8 +1,5 @@
 #include "Plugin.h"
 #include "Hooks.h"
-#include "Event.h"
-
-using namespace raincious::FLHookPlugin::Board;
 
 PLUGIN_RETURNCODE returncode;
 

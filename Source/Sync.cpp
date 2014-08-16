@@ -4,6 +4,7 @@
 
 #include "Sync.h"
 #include "Misc.h"
+#include "Thread.h"
 #include "Common.h"
 
 using namespace Misc;
@@ -19,60 +20,162 @@ namespace raincious
 			{
 				// Client
 				Client::Instances Client::instances;
+				bool Client::inited = false;
+				CRITICAL_SECTION Client::instanceStaticOptLock;
 
-				Client* Client::Get(APILogin clientLogin)
+				APIServer Client::Get(APILogin clientLogin)
 				{
-					static bool inited = false;
+					APIServer serverInfo;
 
 					if (!inited)
 					{
 						inited = true;
 
-						atexit(Release);
+						InitializeCriticalSection(&instanceStaticOptLock);
 					}
 
-					Client* client = new Client(clientLogin);
+					EnterCriticalSection(&instanceStaticOptLock);
+
+					Client* client = new Client(clientLogin, serverInfo);
 
 					instances.push_back(client);
 
-					return client;
+					LeaveCriticalSection(&instanceStaticOptLock);
+
+					return serverInfo;
 				}
 
 				void Client::Send(DataItem data)
 				{
 					Instances::iterator it;
 
-					if (instances.empty())
+					if (!inited)
 					{
 						return;
 					}
 
-					for (it = instances.begin(); it < instances.end(); it++)
+					EnterCriticalSection(&instanceStaticOptLock);
+
+					if (!instances.empty())
 					{
-						(*it)->addQueue(data);
+						for (it = instances.begin(); it < instances.end(); it++)
+						{
+							(*it)->addQueue(data);
+						}
 					}
+
+					LeaveCriticalSection(&instanceStaticOptLock);
+
+					Thread::Worker::Activate();
 				}
 
 				void Client::Release()
 				{
 					Instances::iterator it;
 
-					if (instances.empty())
+					if (!inited)
 					{
+						// Release my axx, you don't even inited.
 						return;
 					}
 
-					for (it = instances.begin(); it < instances.end(); it++)
+					EnterCriticalSection(&instanceStaticOptLock);
+
+					if (!instances.empty())
 					{
-						delete *it;
+						for (it = instances.begin(); it < instances.end(); it++)
+						{
+							delete (*it);
+
+							instances.pop_back();
+						}
 					}
+
+					LeaveCriticalSection(&instanceStaticOptLock);
+
+					DeleteCriticalSection(&instanceStaticOptLock);
+
+					inited = false;
 				}
 
-				Client::Client(APILogin client)
+				bool Client::Run(APIResponsePackages* packages)
+				{
+					APIResponses responses;
+					Instances::iterator instanceIter;
+					bool succeed = true, skip = false;
+
+					if (!inited)
+					{
+						return false;
+					}
+
+					// Lock to read
+					EnterCriticalSection(&instanceStaticOptLock);
+					instanceIter = instances.begin();
+					LeaveCriticalSection(&instanceStaticOptLock);
+
+					while (true)
+					{
+						// Lock to check
+						EnterCriticalSection(&instanceStaticOptLock);
+
+						if (instanceIter == instances.end())
+						{
+							skip = true;
+						}
+
+						LeaveCriticalSection(&instanceStaticOptLock);
+
+						if (skip)
+						{
+							break;
+						}
+
+						APIResponsePackage package;
+						APIResponseStatus status = (*instanceIter)->sendQueue(&responses);
+
+						switch (status)
+						{
+						case SUCCEED:
+							break;
+
+						// All below is failures
+						case PERIOD_LIMIT:
+							// If we got PERIOD_LIMIT problem, wait for 2 second and wake all thread back
+							// And try re-request
+							Sleep(2000);
+
+							Thread::Worker::Activate();
+
+						default:
+							break;
+						}
+
+						if (responses.size() > 0)
+						{
+							package.API = (*instanceIter)->server.Name;
+							package.Responses = responses;
+
+							(*packages).push_back(package);
+						}
+
+						++instanceIter;
+					}
+
+					if ((*packages).size() > 0)
+					{
+						return true;
+					}
+
+					return false;
+				}
+
+				Client::Client(APILogin client, APIServer &serverInfo)
 				{
 					wstring message;
 					string loginErrorMessage;
 					APIResponseStatus loginResponse;
+					InitializeCriticalSection(&queueSycLock);
 
 					server.Token = "";
 					server.Delay = 0;
@@ -87,7 +190,7 @@ namespace raincious
 					
 					verifyer.key(loginInfo.Secret);
 
-					loginResponse = login(loginErrorMessage);
+					loginResponse = login(server, loginErrorMessage);
 
 					if (loginResponse != SUCCEED)
 					{
@@ -128,17 +231,36 @@ namespace raincious
 					}
 					else
 					{
+						serverInfo = server;
 						enabled = true;
+
+						// Want to read token don't you?
+						serverInfo.Token = "";
 					}
 				}
 
 				Client::~Client()
 				{
 					logoff();
+
+					enabled = false; // Disable sync
+
+					// Try enter critical section let going on progress going off
+					EnterCriticalSection(&queueSycLock);
+					
+					LeaveCriticalSection(&queueSycLock);
+
+					// When it's done, remove critical section, and release instance
+					DeleteCriticalSection(&queueSycLock);
 				}
 
 				void Client::printError(wstring error)
 				{
+					if (!Common::DebugPrintEnabled())
+					{
+						return;
+					}
+
 					wstring message = L"[Synchronizing " + (server.Name) + L"] " + error + L" <";
 
 					message.append(L"Delay: ");
@@ -162,7 +284,7 @@ namespace raincious
 					http.header("charsets: utf-8");
 				}
 
-				APIResponseStatus Client::login(string &errorMessage)
+				APIResponseStatus Client::login(APIServer &serverInfo, string &errorMessage)
 				{
 					Json::Value loginParameter;
 					Json::Value responseRoot;
@@ -173,6 +295,7 @@ namespace raincious
 					loginParameter["Cecret"] = verifyer.gen();
 					loginParameter["Account"] = Encode::UTF8Encode(loginInfo.Account);
 					loginParameter["Password"] = Encode::UTF8Encode(loginInfo.Password);
+					loginParameter["Queue"] = loginInfo.Queue;
 
 					Http::Post http(loginInfo.URI);
 
@@ -222,20 +345,20 @@ namespace raincious
 						return ERROR_MESSAGE;
 					}
 
-					server.Token = JsonHelper::GetValueStr(responseRoot, "Token");
+					serverInfo.Token = JsonHelper::GetValueStr(responseRoot, "Token");
 
 					// Actuall, use a string node on all integer and numbers, bools
-					server.Delay = JsonHelper::GetValueUint(
+					serverInfo.Delay = JsonHelper::GetValueUint(
 						responseRoot, "Delay") * 1000; // Server can only return seconds
 
-					server.Name = Encode::UTF8Decode(
+					serverInfo.Name = Encode::UTF8Decode(
 						JsonHelper::GetValueStr(responseRoot, "Name")
 						);
 
-					server.QueueLimit = JsonHelper::GetValueUint(
+					serverInfo.QueueLimit = JsonHelper::GetValueUint(
 						responseRoot, "Queue");
 
-					server.LastSent = clock();
+					serverInfo.LastSent = clock();
 
 					// API Server not returning valid token
 					if (server.Token == "")
@@ -273,11 +396,20 @@ namespace raincious
 
 						server.QueueLimit = SYNC_CLIENT_DEFAULT_QUEUE;
 					}
-					else if (server.QueueLimit > SYNC_CLIENT_MAX_QUEUE)
+					else
 					{
-						printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using limit as maximum");
+						if (loginInfo.Queue > 0 && server.QueueLimit > loginInfo.Queue)
+						{
+							printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using " + Encode::stringToWstring(itos(loginInfo.Queue)) + L" as maximum");
 
-						server.QueueLimit = SYNC_CLIENT_MAX_QUEUE;
+							server.QueueLimit = loginInfo.Queue;
+						}
+						else if (server.QueueLimit > SYNC_CLIENT_MAX_QUEUE)
+						{
+							printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using maximum as limit");
+
+							server.QueueLimit = SYNC_CLIENT_MAX_QUEUE;
+						}
 					}
 
 					printError(L"Logged in");
@@ -427,7 +559,7 @@ namespace raincious
 							return FAILED_LOGIN;
 						}
 
-						if (login(errMessage) == SUCCEED)
+						if (login(server, errMessage) == SUCCEED)
 						{
 							return sync(root, responses, true);
 						}
@@ -559,7 +691,7 @@ namespace raincious
 						return;
 					}
 
-					InitializeCriticalSection(&queueSycLock);
+					EnterCriticalSection(&queueSycLock);
 
 					qLength = sendingQueue.size();
 
@@ -572,7 +704,7 @@ namespace raincious
 
 					sendingQueue.push(data);
 
-					DeleteCriticalSection(&queueSycLock);
+					LeaveCriticalSection(&queueSycLock);
 				}
 
 				APIResponseStatus Client::sendQueue(APIResponses* responses)
@@ -582,7 +714,7 @@ namespace raincious
 					clock_t currentTime = clock();
 					Queue opearatingQueue, emptyQueue;
 					uint addedItems = 0;
-
+					
 					if (!enabled)
 					{
 						printError(L"Disabled, can't send queue to this API server.");
@@ -596,11 +728,11 @@ namespace raincious
 
 						return PERIOD_LIMIT;
 					}
+					
+					// OK, let me copy this queue so we will get rid of lock problem
+					EnterCriticalSection(&queueSycLock);
 
 					server.LastSent = currentTime;
-
-					// OK, let me copy this queue so we will get rid of lock problem
-					InitializeCriticalSection(&queueSycLock);
 
 					if (!sendingQueue.empty())
 					{
@@ -610,8 +742,8 @@ namespace raincious
 					}
 
 					// Unlock, the queue are free
-					DeleteCriticalSection(&queueSycLock);
-
+					LeaveCriticalSection(&queueSycLock);
+					
 					// Loop all queues until it empty
 					while (!opearatingQueue.empty())
 					{
@@ -652,43 +784,8 @@ namespace raincious
 
 						return NO_TASK;
 					}
-
-					return sync(items, responses, false);
-				}
-
-				bool Client::Run(APIResponsePackage* package)
-				{
-					Instances::iterator instanceIter;
-					bool succeed = true;
 					
-					for (instanceIter = instances.begin(); instanceIter != instances.end(); ++instanceIter) {
-						APIResponses responses;
-
-						APIResponseStatus status = (*instanceIter)->sendQueue(&responses);
-
-						switch (status)
-						{
-						case SUCCEED:
-
-						case PERIOD_LIMIT:
-							// Consider the server's own PERIOD_LIMIT as success
-							// as it's not the reason so slow the thread
-
-						case INVALID_DATA:
-							// Consider this as the API application error
-							// No need to slow the thread
-							break;
-
-						default:
-							succeed = false;
-							break;
-						}
-
-						(*package).API = (*instanceIter)->server.Name;
-						(*package).Responses = responses;
-					}
-
-					return succeed;
+					return sync(items, responses, false);
 				}
 
 				// Listener
@@ -701,23 +798,32 @@ namespace raincious
 					return;
 				}
 
-				void Listener::Run(Sync::APIResponsePackage &package)
+				void Listener::Run(Sync::APIResponsePackages &packages)
 				{
 					uint listenerCalls = 0;
 					double startTime = 0, finishTime = 0; // Can't use clock_t, or you get X000ms
 					APIResponses::iterator responsesIter;
+					APIResponsePackages::iterator packageIter;
 					wstringstream wss, wsss;
 
 					printError(L"Calling response handlers");
 
 					startTime = clock();
 
-					for (responsesIter = package.Responses.begin(); responsesIter != package.Responses.end(); responsesIter++)
+					for (packageIter = packages.begin(); packageIter != packages.end(); packageIter++)
 					{
-						Data::Parameter parameter(responsesIter->Data);
+						printError(L"Handling response task for API " + (*packageIter).API);
 
-						trigger(package.API, responsesIter->Type, parameter);
-						listenerCalls++;
+						for (responsesIter = (*packageIter).Responses.begin(); responsesIter != (*packageIter).Responses.end(); responsesIter++)
+						{
+							Data::Parameter parameter(responsesIter->Data);
+
+							trigger((*packageIter).API, responsesIter->Type, parameter);
+
+							listenerCalls++;
+						}
+
+						printError(L"Finished");
 					}
 
 					finishTime = clock();
@@ -757,6 +863,11 @@ namespace raincious
 
 				void Listener::printError(wstring error)
 				{
+					if (!Common::DebugPrintEnabled())
+					{
+						return;
+					}
+
 					wstring message = L"[Responsing] " + error + L" <";
 
 					message.append(L"Events: ");

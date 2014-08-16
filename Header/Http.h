@@ -93,6 +93,9 @@ namespace raincious
 					long getCode();
 
 				protected:
+					// Init lock
+					static bool inited;
+
 					// curl easy instance
 					CURL *curl;
 

@@ -1,9 +1,9 @@
 #include <windows.h>
-#include <time.h>
 #include <process.h>
 
 #include "Common.h"
 #include "Thread.h"
+#include "Misc.h"
 #include "Sync.h"
 
 #include "../../flhookplugin_sdk/headers/FLHook.h"
@@ -18,62 +18,92 @@ namespace raincious
 		{
 			namespace Thread
 			{
-				Worker* Worker::_instance = 0;
-				bool Worker::_shutdown = false;
+				bool Worker::inited = false;
+				CRITICAL_SECTION Worker::staticOptLock;
+				Worker::Instances Worker::instances;
 
-				Worker *Worker::Start()
+				void Worker::Start(uint threads)
 				{
-					if (0 == _instance) {
-						_instance = new Worker();
+					if (!inited)
+					{
+						inited = true;
+
+						InitializeCriticalSection(&staticOptLock);
 					}
 
-					return _instance;
+					EnterCriticalSection(&staticOptLock);
+
+					Worker* worker = new Worker(threads);
+
+					instances.push_back(worker);
+
+					LeaveCriticalSection(&staticOptLock);
 				}
 
 				void Worker::Stop()
 				{
-					if (0 != _instance) {
-						delete _instance;
+					Instances::iterator iter;
 
-						_instance = 0;
+					if (!inited)
+					{
+						return;
 					}
+
+					EnterCriticalSection(&staticOptLock);
+
+					for (iter = instances.begin(); iter != instances.end(); iter++)
+					{
+						delete (*iter);
+					}
+
+					instances.clear();
+
+					LeaveCriticalSection(&staticOptLock);
+					DeleteCriticalSection(&staticOptLock);
+
+					inited = false;
 				}
 
-				Worker::Worker()
+				void Worker::Activate()
 				{
-					_shutdown = false;
+					Instances::iterator iter;
 
-					this->thread = (HANDLE)_beginthreadex(0, 0, &Worker::Thread, NULL, 0, NULL);
+					if (!inited)
+					{
+						return;
+					}
 
-					CloseHandle(this->thread);
+					EnterCriticalSection(&staticOptLock);
+
+					for (iter = instances.begin(); iter != instances.end(); iter++)
+					{
+						(*iter)->wakeUp();
+					}
+
+					LeaveCriticalSection(&staticOptLock);
 				}
 
-				Worker::~Worker()
+				unsigned __stdcall Worker::Thread(void *threadData)
 				{
-					Common::PrintConInfo(L"freeing Thread...");
-
-					_shutdown = true;
-					WaitForSingleObject(&Worker::Thread, INFINITE);
-
-					Common::PrintConInfo(L"Thread freed...");
-				}
-				
-				unsigned __stdcall Worker::Thread(void *args)
-				{
-					int sleep = 1,
-						lastDelay = sleep, currentDelay = sleep;
-					
 					bool failedLoop = false;
 
-					clock_t startTime, endTime;
-
-					while (!_shutdown)
+					double startTime = 0, endTime = 0;
+					
+					ThreadData* data = (ThreadData*)threadData;
+					
+					while (true)
 					{
-						startTime = clock();
+						WaitForSingleObject((*data).WaitEvent, INFINITE);
 
-						Sync::APIResponsePackage package;
+						if ((*data).Close)
+						{
+							// Thread be like: bye bye
+							break;
+						}
 
-						if (!Sync::Client::Run(&package))
+						Sync::APIResponsePackages packages;
+
+						if (!Sync::Client::Run(&packages))
 						{
 							failedLoop = true;
 						}
@@ -83,46 +113,124 @@ namespace raincious
 
 							try
 							{
-								Sync::Listener::Run(package);
+								Sync::Listener::Run(packages);
 							}
-							catch(...)
+							catch (...)
 							{
-								AddLog("[Board] At least one response call back ran and failed.");
+								AddLog("[Board] At least one Response Task callback rans and failed.");
 							}
 						}
-
-						endTime = clock();
-
-						currentDelay = (endTime - startTime) / (CLOCKS_PER_SEC / 1000);
-
-						if (!failedLoop) // If loop is succeed (Sync got and send), we can go faster (or better avg)
-						{
-							sleep = (int)((currentDelay + lastDelay) / 2);
-
-							lastDelay = currentDelay;
-						}
-						else // If not (Sync failed or not send), go slower
-						{
-							sleep += currentDelay + 1;
-
-							lastDelay = sleep;
-						}
-
-						if (sleep > MAX_THREAD_WAITING_TIME)
-						{
-							sleep = MAX_THREAD_WAITING_TIME;
-						}
-
-						if (sleep < 1)
-						{
-							sleep = 1;
-						}
-
-						Sleep(sleep * 1000); // One second by force 
 					}
 
 					_endthreadex(0);
+
 					return 0;
+				}
+
+				Worker::Worker(uint threads)
+				{
+					uint threadOpenLoop;
+
+					InitializeCriticalSection(&instanceOptLock);
+
+					EnterCriticalSection(&instanceOptLock);
+
+					for (threadOpenLoop = 0; threadOpenLoop < threads; threadOpenLoop++)
+					{
+						ThreadData* threadData = new ThreadData;
+
+						(*threadData).Close = false;
+						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
+						(*threadData).Thread = (HANDLE)_beginthreadex(0, 0, &Thread, threadData, 0, NULL);
+
+						// CloseHandle(threadHandle);
+
+						openedThreads.push_back(threadData);
+
+						printError(L"New thread created");
+
+						Sleep(100);
+					}
+
+					LeaveCriticalSection(&instanceOptLock);
+				}
+
+				Worker::~Worker() {
+					EnterCriticalSection(&instanceOptLock);
+					
+					ThreadDatas::iterator iter;
+
+					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
+					{
+						(*iter)->Close = true;
+
+						if (!SetEvent((*iter)->WaitEvent))
+						{
+							printError(L"Try sending shutdown to thread, but failed");
+
+							// Do a close here too
+							CloseHandle((*iter)->WaitEvent);
+
+							continue;
+						}
+
+						CloseHandle((*iter)->WaitEvent);
+
+						switch (WaitForSingleObject((*iter)->Thread, MAX_THREAD_CLOSE_WAITING_TIME))
+						{
+						case WAIT_OBJECT_0:
+							printError(L"Thread closed");
+							break;
+
+						default:
+							printError(L"Encounter a problem when try to closing thread");
+							break;
+						}
+
+						// Free the thread handle
+						CloseHandle((*iter)->Thread);
+
+						delete (*iter); // Delete the container it self
+
+						Sleep(100);
+					}
+
+					LeaveCriticalSection(&instanceOptLock);
+
+					DeleteCriticalSection(&instanceOptLock);
+
+					printError(L"Thread data has been cleared");
+				};
+
+				void Worker::wakeUp()
+				{
+					EnterCriticalSection(&instanceOptLock);
+
+					ThreadDatas::iterator iter;
+
+					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
+					{
+						SetEvent((*iter)->WaitEvent);
+					}
+
+					LeaveCriticalSection(&instanceOptLock);
+				}
+
+				void Worker::printError(wstring error)
+				{
+					if (!Common::DebugPrintEnabled())
+					{
+						return;
+					}
+
+					wstring message = L"[Thread] " + error + L" <";
+
+					message.append(L"Threads: ");
+					message.append(Misc::Encode::stringToWstring(itos(openedThreads.size())));
+
+					message.append(L">");
+
+					Common::PrintConInfo(message);
 				}
 			}
 		}
