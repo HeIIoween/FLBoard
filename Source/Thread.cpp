@@ -93,6 +93,8 @@ namespace raincious
 					
 					while (true)
 					{
+						(*data).Busy = false;
+
 						WaitForSingleObject((*data).WaitEvent, INFINITE);
 
 						if ((*data).Close)
@@ -100,6 +102,8 @@ namespace raincious
 							// Thread be like: bye bye
 							break;
 						}
+
+						(*data).Busy = true;
 
 						Sync::APIResponsePackages packages;
 
@@ -204,13 +208,31 @@ namespace raincious
 
 				void Worker::wakeUp()
 				{
+					bool waked = false;
+
 					EnterCriticalSection(&instanceOptLock);
 
-					ThreadDatas::iterator iter;
+					srand((uint)time(NULL));
+
+					ThreadDatas::iterator iter, lastIter;
 
 					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
 					{
-						SetEvent((*iter)->WaitEvent);
+						if (!(*iter)->Busy || rand() % 3)
+						{
+							SetEvent((*iter)->WaitEvent);
+							waked = true;
+							break;
+						}
+						else
+						{
+							lastIter = iter;
+						}
+					}
+
+					if (!waked)
+					{
+						SetEvent((*lastIter)->WaitEvent);
 					}
 
 					LeaveCriticalSection(&instanceOptLock);

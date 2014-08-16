@@ -143,7 +143,7 @@ namespace raincious
 						case PERIOD_LIMIT:
 							// If we got PERIOD_LIMIT problem, wait for 2 second and wake all thread back
 							// And try re-request
-							Sleep(2000);
+							Sleep(5000);
 
 							Thread::Worker::Activate();
 
@@ -854,10 +854,10 @@ namespace raincious
 
 						(*eHandlerIter)(source, response);
 
+						printError(L"- Fired");
+
 						// We in thread, so we can sleep a little, let CPU do some other things.
 						Sleep(100);
-
-						printError(L"- Fired");
 					}
 				}
 

@@ -35,6 +35,7 @@ namespace raincious
 						typedef struct ThreadData
 						{
 							bool Close;
+							bool Busy;
 							HANDLE WaitEvent;
 							HANDLE Thread;
 						} threadData;
