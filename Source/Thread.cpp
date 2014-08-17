@@ -90,10 +90,19 @@ namespace raincious
 					string errMsg = "";
 					
 					ThreadData* data = (ThreadData*)threadData;
-					
+
 					while ((*data).Keep)
 					{
-						if ((*data).Retrying > 0)
+						// Guard thread will always run
+						if ((*data).Guard)
+						{
+							(*data).Busy = false;
+
+							WaitForSingleObject((*data).WaitEvent, MAX_THREAD_RUN_DELAY);
+
+							(*data).Busy = true;
+						}
+						else // If it's not a Guarder, make it run when needed
 						{
 							(*data).Busy = false;
 
@@ -109,33 +118,11 @@ namespace raincious
 							break;
 						}
 
+						// No one uses (*data) again below this line.
+
 						Sync::APIResponsePackages packages;
 
-						if (!Sync::Client::Run(&packages))
-						{
-							if ((*data).Retrying < MAX_THREAD_MAX_RETRY)
-							{
-								nextSleep = ++(*data).Retrying;
-
-								if (nextSleep > MAX_THREAD_RETRY_DELAY)
-								{
-									nextSleep = MAX_THREAD_RETRY_DELAY;
-								}
-
-								Sleep(1000 * nextSleep);
-							}
-							else
-							{
-								// In fact, no need to wait, pause yourself
-								// Let other plugin to active you and try for it as they can get sent time
-								(*data).Retrying = 0;
-							}
-						}
-						else
-						{
-							nextSleep = 1;
-							(*data).Retrying = 0;
-						}
+						Sync::Client::Run(&packages);
 
 						// Try handle data no matter what Sycn runners says
 						if (packages.size() > 0)
@@ -153,7 +140,7 @@ namespace raincious
 							}
 						}
 
-						Sleep(100);
+						Sleep(100); // Take a nap
 					}
 
 					_endthreadex(0);
@@ -163,6 +150,7 @@ namespace raincious
 
 				Worker::Worker(uint threads)
 				{
+					killing = false;
 					uint threadOpenLoop;
 
 					InitializeCriticalSection(&instanceOptLock);
@@ -173,7 +161,18 @@ namespace raincious
 					{
 						ThreadData* threadData = new ThreadData;
 
+						if (openedThreads.size() == 0)
+						{
+							(*threadData).Guard = true;
+						}
+						else
+						{
+							(*threadData).Guard = false;
+						}
+						
 						(*threadData).Keep = true;
+						(*threadData).Busy = false;
+
 						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
 						(*threadData).Thread = (HANDLE)_beginthreadex(0, 0, &Thread, threadData, 0, NULL);
 
@@ -182,11 +181,18 @@ namespace raincious
 						printError(L"New thread created");
 					}
 
+					if (openedThreads.size() > 0)
+					{
+						multiThreads = true;
+					}
+
 					LeaveCriticalSection(&instanceOptLock);
 				}
 
 				Worker::~Worker() {
 					EnterCriticalSection(&instanceOptLock);
+
+					killing = true;
 					
 					printError(L"Closing thread. It may take few minutes");
 
@@ -235,28 +241,39 @@ namespace raincious
 				void Worker::wakeUp()
 				{
 					bool waked = false;
+					uint threadSize = 0;
+					
+					// If we are shuting down, no new wake up request
+					if (killing)
+					{
+						return;
+					}
 
 					EnterCriticalSection(&instanceOptLock);
 
-					ThreadDatas::iterator iter, lastIter;
-
-					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
+					if (multiThreads) // If we can have not only the guard thread, so we can select another one to enable
 					{
-						if (!(*iter)->Busy)
-						{
-							SetEvent((*iter)->WaitEvent);
-							waked = true;
-							break;
-						}
-						else
-						{
-							lastIter = iter;
-						}
-					}
+						ThreadDatas::iterator iter, lastIter;
 
-					if (!waked)
-					{
-						SetEvent((*lastIter)->WaitEvent);
+						for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
+						{
+							if (!(*iter)->Busy)
+							{
+								SetEvent((*iter)->WaitEvent);
+
+								waked = true;
+								break;
+							}
+							else
+							{
+								lastIter = iter;
+							}
+						}
+
+						if (!waked)
+						{
+							SetEvent((*lastIter)->WaitEvent);
+						}
 					}
 
 					LeaveCriticalSection(&instanceOptLock);

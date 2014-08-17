@@ -56,12 +56,9 @@ namespace raincious
 						return;
 					}
 
-					if (!instances.empty())
+					for (it = instances.begin(); it != instances.end(); it++)
 					{
-						for (it = instances.begin(); it < instances.end(); it++)
-						{
-							(*it)->addQueue(data);
-						}
+						(*it)->addQueue(data);
 					}
 
 					Thread::Worker::Activate();
