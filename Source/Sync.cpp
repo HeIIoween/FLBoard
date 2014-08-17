@@ -21,7 +21,6 @@ namespace raincious
 				// Client
 				Client::Instances Client::instances;
 				bool Client::inited = false;
-				CRITICAL_SECTION Client::instanceStaticOptLock;
 
 				APIServer Client::Get(APILogin clientLogin)
 				{
@@ -31,16 +30,12 @@ namespace raincious
 					{
 						inited = true;
 
-						InitializeCriticalSection(&instanceStaticOptLock);
+						Http::Http::StartUp();
 					}
-
-					EnterCriticalSection(&instanceStaticOptLock);
 
 					Client* client = new Client(clientLogin, serverInfo);
 
 					instances.push_back(client);
-
-					LeaveCriticalSection(&instanceStaticOptLock);
 
 					return serverInfo;
 				}
@@ -54,8 +49,6 @@ namespace raincious
 						return;
 					}
 
-					EnterCriticalSection(&instanceStaticOptLock);
-
 					if (!instances.empty())
 					{
 						for (it = instances.begin(); it < instances.end(); it++)
@@ -63,8 +56,6 @@ namespace raincious
 							(*it)->addQueue(data);
 						}
 					}
-
-					LeaveCriticalSection(&instanceStaticOptLock);
 
 					Thread::Worker::Activate();
 				}
@@ -79,8 +70,6 @@ namespace raincious
 						return;
 					}
 
-					EnterCriticalSection(&instanceStaticOptLock);
-
 					if (!instances.empty())
 					{
 						for (it = instances.begin(); it < instances.end(); it++)
@@ -91,61 +80,32 @@ namespace raincious
 						}
 					}
 
-					LeaveCriticalSection(&instanceStaticOptLock);
-
-					DeleteCriticalSection(&instanceStaticOptLock);
+					Http::Http::CleanUp();
 
 					inited = false;
 				}
 
 				bool Client::Run(APIResponsePackages* packages)
 				{
-					APIResponses responses;
-					Instances::iterator instanceIter;
-					bool succeed = true, skip = false;
-
 					if (!inited)
 					{
-						return false;
+						return true;
 					}
 
-					// Lock to read
-					EnterCriticalSection(&instanceStaticOptLock);
-					instanceIter = instances.begin();
-					LeaveCriticalSection(&instanceStaticOptLock);
+					APIResponses responses;
+					Instances::iterator instanceIter;
+					bool skip = false;
 
-					while (true)
+					for (instanceIter = instances.begin(); instanceIter != instances.end(); instanceIter++)
 					{
-						// Lock to check
-						EnterCriticalSection(&instanceStaticOptLock);
-
-						if (instanceIter == instances.end())
-						{
-							skip = true;
-						}
-
-						LeaveCriticalSection(&instanceStaticOptLock);
-
-						if (skip)
-						{
-							break;
-						}
-
 						APIResponsePackage package;
 						APIResponseStatus status = (*instanceIter)->sendQueue(&responses);
 
 						switch (status)
 						{
-						case SUCCEED:
-							break;
-
-						// All below is failures
 						case PERIOD_LIMIT:
-							// If we got PERIOD_LIMIT problem, wait for 2 second and wake all thread back
-							// And try re-request
-							Sleep(5000);
-
-							Thread::Worker::Activate();
+							return false; // False for retry
+							break;
 
 						default:
 							break;
@@ -158,16 +118,9 @@ namespace raincious
 
 							(*packages).push_back(package);
 						}
-
-						++instanceIter;
 					}
 
-					if ((*packages).size() > 0)
-					{
-						return true;
-					}
-
-					return false;
+					return true;
 				}
 
 				Client::Client(APILogin client, APIServer &serverInfo)
@@ -245,12 +198,10 @@ namespace raincious
 
 					enabled = false; // Disable sync
 
-					// Try enter critical section let going on progress going off
 					EnterCriticalSection(&queueSycLock);
-					
+
 					LeaveCriticalSection(&queueSycLock);
 
-					// When it's done, remove critical section, and release instance
 					DeleteCriticalSection(&queueSycLock);
 				}
 

@@ -18,6 +18,7 @@ namespace raincious
 				{
 					// Runing as follow order
 					Thread::Worker::Stop(); // 1, Everythings finer with stopped threads
+
 					Sync::Client::Release(); // 2, Clear all sync info
 				}
 			}

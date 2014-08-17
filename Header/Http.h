@@ -82,6 +82,9 @@ namespace raincious
 					static Http *Create(string target);
 					static void Free(Http* http);
 
+					static void StartUp();
+					static void CleanUp();
+
 					void setHeader(const char* header);
 					void setMethod(Method method);
 
@@ -94,7 +97,9 @@ namespace raincious
 
 				protected:
 					// Init lock
-					static bool inited;
+					static bool startedUp;
+
+					static CRITICAL_SECTION httpInitLock;
 
 					// curl easy instance
 					CURL *curl;
@@ -102,7 +107,7 @@ namespace raincious
 					method currentMethod;
 
 					// curl
-					struct curl_slist *headers;
+					struct curl_slist* headers;
 
 					// Target url
 					string serverAddress;
@@ -117,14 +122,12 @@ namespace raincious
 					Http(string target);
 					~Http();
 
-					static void Http::CleanUp();
-
 					string getQueryDatas();
 
 					// Curl handlers
 					string curlEscape(string str);
-					static size_t Http::staticCurlCallback(void* buf, size_t size, size_t nmemb, void* self);
-					size_t Http::curlWriteCallback(char* buf, size_t size, size_t nmemb);
+					static size_t staticCurlCallback(void* buf, size_t size, size_t nmemb, void* self);
+					size_t curlWriteCallback(char* buf, size_t size, size_t nmemb);
 				};
 
 				class HttpHandler

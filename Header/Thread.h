@@ -3,6 +3,7 @@
 #include "../../flhookplugin_sdk/headers/FLHook.h"
 
 #define MAX_THREAD_CLOSE_WAITING_TIME 60000
+#define MAX_THREAD_RETRY_DELAY 10
 
 namespace raincious
 {
@@ -36,6 +37,7 @@ namespace raincious
 						{
 							bool Close;
 							bool Busy;
+							bool Retrying;
 							HANDLE WaitEvent;
 							HANDLE Thread;
 						} threadData;

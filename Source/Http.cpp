@@ -10,36 +10,41 @@ namespace raincious
 		{
 			namespace Http
 			{
-				bool Http::inited = false;
+				bool Http::startedUp = false;
+				CRITICAL_SECTION Http::httpInitLock;
 
 				Http *Http::Create(string target)
 				{
-					if (!inited)
+					return new Http(target);
+				}
+
+				void Http::StartUp()
+				{
+					if (startedUp)
 					{
-						inited = true;
-
-						CURLcode initResult = curl_global_init(CURL_GLOBAL_ALL);
-
-						atexit(CleanUp);
-
-						if (initResult != CURLE_OK)
-						{
-							throw HttpCURLInitException(initResult);
-						}
+						return;
 					}
 
-					return new Http(target);
+					CURLcode initResult = curl_global_init(CURL_GLOBAL_ALL);
+
+					if (initResult != CURLE_OK)
+					{
+						curl_global_cleanup();
+
+						throw HttpCURLInitException(initResult);
+					}
+
+					startedUp = true;
 				}
 
 				void Http::CleanUp()
 				{
-					if (!inited)
+					if (!startedUp)
 					{
 						return;
 					}
 					
 					curl_global_cleanup();
-					inited = false;
 				}
 
 				void Http::Free(Http *http)

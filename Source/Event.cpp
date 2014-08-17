@@ -39,6 +39,7 @@ namespace raincious
 				{
 					int boardIndex = 0;
 					string boardIndexStr = "";
+					string errorMessage = "";
 					Data::ParameterSet parameters;
 
 					INI_Reader ini;
@@ -92,18 +93,27 @@ namespace raincious
 								continue;
 							}
 
-							server = Sync::Client::Get(login);
+							try
+							{
+								server = Sync::Client::Get(login);
 
-							Data::ParameterData data;
-							
-							data[L"Name"] = server.Name;
-							data[L"LastSent"] = (uint)server.LastSent;
-							data[L"Queue"] = server.QueueLimit;
-							data[L"Delay"] = server.Delay;
+								Data::ParameterData data;
 
-							Data::Parameter parameter(data);
+								data[L"Name"] = server.Name;
+								data[L"LastSent"] = (uint)server.LastSent;
+								data[L"Queue"] = server.QueueLimit;
+								data[L"Delay"] = server.Delay;
 
-							parameters.push_back(parameter);
+								Data::Parameter parameter(data);
+
+								parameters.push_back(parameter);
+							}
+							catch (exception &e)
+							{
+								errorMessage = e.what();
+
+								Common::PrintConInfo(L"Got a failure when try to load setting for API " + wstring(login.URI.begin(), login.URI.end()) + L": " + wstring(errorMessage.begin(), errorMessage.end()));
+							}
 						}
 					}
 

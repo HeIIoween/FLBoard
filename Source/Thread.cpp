@@ -85,17 +85,25 @@ namespace raincious
 
 				unsigned __stdcall Worker::Thread(void *threadData)
 				{
-					bool failedLoop = false;
-
 					double startTime = 0, endTime = 0;
+					uint retryDelay = 0;
 					
 					ThreadData* data = (ThreadData*)threadData;
 					
 					while (true)
 					{
-						(*data).Busy = false;
+						// Double check the close, because the thread may get it before or after task
+						if ((*data).Close)
+						{
+							break;
+						}
 
-						WaitForSingleObject((*data).WaitEvent, INFINITE);
+						if (!(*data).Retrying)
+						{
+							(*data).Busy = false;
+
+							WaitForSingleObject((*data).WaitEvent, INFINITE);
+						}
 
 						if ((*data).Close)
 						{
@@ -109,11 +117,20 @@ namespace raincious
 
 						if (!Sync::Client::Run(&packages))
 						{
-							failedLoop = true;
+							(*data).Retrying = true;
+
+							Sleep(1000 * (++retryDelay));
+
+							if (retryDelay > MAX_THREAD_RETRY_DELAY)
+							{
+								retryDelay = MAX_THREAD_RETRY_DELAY;
+							}
 						}
 						else
 						{
-							failedLoop = false;
+							(*data).Retrying = false;
+
+							retryDelay = 1;
 
 							try
 							{
@@ -124,6 +141,8 @@ namespace raincious
 								AddLog("[Board] At least one Response Task callback rans and failed.");
 							}
 						}
+
+						Sleep(100);
 					}
 
 					_endthreadex(0);
@@ -147,8 +166,6 @@ namespace raincious
 						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
 						(*threadData).Thread = (HANDLE)_beginthreadex(0, 0, &Thread, threadData, 0, NULL);
 
-						// CloseHandle(threadHandle);
-
 						openedThreads.push_back(threadData);
 
 						printError(L"New thread created");
@@ -163,6 +180,8 @@ namespace raincious
 					EnterCriticalSection(&instanceOptLock);
 					
 					ThreadDatas::iterator iter;
+
+					printError(L"Closing thread. It may take few minutes");
 
 					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
 					{
@@ -195,8 +214,6 @@ namespace raincious
 						CloseHandle((*iter)->Thread);
 
 						delete (*iter); // Delete the container it self
-
-						Sleep(100);
 					}
 
 					LeaveCriticalSection(&instanceOptLock);
