@@ -4,6 +4,7 @@
 
 #define MAX_THREAD_CLOSE_WAITING_TIME 60000
 #define MAX_THREAD_RETRY_DELAY 10
+#define MAX_THREAD_MAX_RETRY 10
 
 namespace raincious
 {
@@ -37,7 +38,7 @@ namespace raincious
 						{
 							bool Close;
 							bool Busy;
-							bool Retrying;
+							uint Retrying;
 							HANDLE WaitEvent;
 							HANDLE Thread;
 						} threadData;

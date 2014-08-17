@@ -86,7 +86,8 @@ namespace raincious
 				unsigned __stdcall Worker::Thread(void *threadData)
 				{
 					double startTime = 0, endTime = 0;
-					uint retryDelay = 0;
+					uint nextSleep = 1;
+					string errMsg = "";
 					
 					ThreadData* data = (ThreadData*)threadData;
 					
@@ -98,11 +99,13 @@ namespace raincious
 							break;
 						}
 
-						if (!(*data).Retrying)
+						if ((*data).Retrying > 0)
 						{
 							(*data).Busy = false;
 
 							WaitForSingleObject((*data).WaitEvent, INFINITE);
+
+							(*data).Busy = true;
 						}
 
 						if ((*data).Close)
@@ -111,34 +114,41 @@ namespace raincious
 							break;
 						}
 
-						(*data).Busy = true;
-
 						Sync::APIResponsePackages packages;
 
 						if (!Sync::Client::Run(&packages))
 						{
-							(*data).Retrying = true;
-
-							Sleep(1000 * (++retryDelay));
-
-							if (retryDelay > MAX_THREAD_RETRY_DELAY)
+							if ((*data).Retrying < MAX_THREAD_MAX_RETRY)
 							{
-								retryDelay = MAX_THREAD_RETRY_DELAY;
+								nextSleep = ++(*data).Retrying;
+
+								if (nextSleep > MAX_THREAD_RETRY_DELAY)
+								{
+									nextSleep = MAX_THREAD_RETRY_DELAY;
+								}
 							}
+							else
+							{
+								// Keep trying, but as Busy flaged as false
+								(*data).Busy = false;
+							}
+
+							Sleep(1000 * nextSleep);
 						}
 						else
 						{
-							(*data).Retrying = false;
-
-							retryDelay = 1;
+							(*data).Retrying = 0;
 
 							try
 							{
 								Sync::Listener::Run(packages);
 							}
-							catch (...)
+							catch (exception &e)
 							{
-								AddLog("[Board] At least one Response Task callback rans and failed.");
+								errMsg = "[Board] At least one Response Task callback rans and failed: ";
+								errMsg.append(e.what());
+
+								AddLog(errMsg.c_str());
 							}
 						}
 
@@ -229,13 +239,11 @@ namespace raincious
 
 					EnterCriticalSection(&instanceOptLock);
 
-					srand((uint)time(NULL));
-
 					ThreadDatas::iterator iter, lastIter;
 
 					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
 					{
-						if (!(*iter)->Busy || rand() % 3)
+						if (!(*iter)->Busy)
 						{
 							SetEvent((*iter)->WaitEvent);
 							waked = true;
