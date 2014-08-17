@@ -121,14 +121,15 @@ namespace raincious
 								{
 									nextSleep = MAX_THREAD_RETRY_DELAY;
 								}
+
+								Sleep(1000 * nextSleep);
 							}
 							else
 							{
-								// Keep trying, but as Busy flaged as false
-								(*data).Busy = false;
+								// In fact, no need to wait, pause yourself
+								// Let other plugin to active you and try for it as they can get sent time
+								(*data).Retrying = 0;
 							}
-
-							Sleep(1000 * nextSleep);
 						}
 						else
 						{
