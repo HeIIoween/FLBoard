@@ -91,14 +91,8 @@ namespace raincious
 					
 					ThreadData* data = (ThreadData*)threadData;
 					
-					while (true)
+					while ((*data).Keep)
 					{
-						// Double check the close, because the thread may get it before or after task
-						if ((*data).Close)
-						{
-							break;
-						}
-
 						if ((*data).Retrying > 0)
 						{
 							(*data).Busy = false;
@@ -108,7 +102,8 @@ namespace raincious
 							(*data).Busy = true;
 						}
 
-						if ((*data).Close)
+						// Double check the close, because the thread may get it before or after task
+						if (!(*data).Keep)
 						{
 							// Thread be like: bye bye
 							break;
@@ -137,8 +132,13 @@ namespace raincious
 						}
 						else
 						{
+							nextSleep = 1;
 							(*data).Retrying = 0;
+						}
 
+						// Try handle data no matter what Sycn runners says
+						if (packages.size() > 0)
+						{
 							try
 							{
 								Sync::Listener::Run(packages);
@@ -172,15 +172,13 @@ namespace raincious
 					{
 						ThreadData* threadData = new ThreadData;
 
-						(*threadData).Close = false;
+						(*threadData).Keep = true;
 						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
 						(*threadData).Thread = (HANDLE)_beginthreadex(0, 0, &Thread, threadData, 0, NULL);
 
 						openedThreads.push_back(threadData);
 
 						printError(L"New thread created");
-
-						Sleep(100);
 					}
 
 					LeaveCriticalSection(&instanceOptLock);
@@ -189,41 +187,41 @@ namespace raincious
 				Worker::~Worker() {
 					EnterCriticalSection(&instanceOptLock);
 					
-					ThreadDatas::iterator iter;
-
 					printError(L"Closing thread. It may take few minutes");
 
-					for (iter = openedThreads.begin(); iter != openedThreads.end(); iter++)
+					while (openedThreads.size() > 0)
 					{
-						(*iter)->Close = true;
+						ThreadData* threadData = openedThreads.back();
+						openedThreads.pop_back();
 
-						if (!SetEvent((*iter)->WaitEvent))
+						threadData->Keep = false;
+
+						if (!SetEvent(threadData->WaitEvent))
 						{
 							printError(L"Try sending shutdown to thread, but failed");
 
 							// Do a close here too
-							CloseHandle((*iter)->WaitEvent);
+							CloseHandle(threadData->WaitEvent);
 
 							continue;
 						}
 
-						CloseHandle((*iter)->WaitEvent);
-
-						switch (WaitForSingleObject((*iter)->Thread, MAX_THREAD_CLOSE_WAITING_TIME))
+						switch (WaitForSingleObject(threadData->Thread, MAX_THREAD_CLOSE_WAITING_TIME))
 						{
 						case WAIT_OBJECT_0:
 							printError(L"Thread closed");
 							break;
 
 						default:
-							printError(L"Encounter a problem when try to closing thread");
+							printError(L"Encountered a problem when trying to close thread");
 							break;
 						}
 
-						// Free the thread handle
-						CloseHandle((*iter)->Thread);
+						// Free the thread handles
+						CloseHandle(threadData->WaitEvent);
+						CloseHandle(threadData->Thread);
 
-						delete (*iter); // Delete the container it self
+						delete (threadData); // Delete the data container it self
 					}
 
 					LeaveCriticalSection(&instanceOptLock);

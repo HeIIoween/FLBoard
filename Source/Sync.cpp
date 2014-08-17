@@ -20,6 +20,7 @@ namespace raincious
 			{
 				// Client
 				Client::Instances Client::instances;
+				CRITICAL_SECTION Client::staticQueueLock;
 				bool Client::inited = false;
 
 				APIServer Client::Get(APILogin clientLogin)
@@ -31,11 +32,17 @@ namespace raincious
 						inited = true;
 
 						Http::Http::StartUp();
+
+						InitializeCriticalSection(&staticQueueLock);
 					}
+
+					EnterCriticalSection(&staticQueueLock);
 
 					Client* client = new Client(clientLogin, serverInfo);
 
 					instances.push_back(client);
+
+					LeaveCriticalSection(&staticQueueLock);
 
 					return serverInfo;
 				}
@@ -70,19 +77,26 @@ namespace raincious
 						return;
 					}
 
+					EnterCriticalSection(&staticQueueLock);
+
 					if (!instances.empty())
 					{
-						for (it = instances.begin(); it < instances.end(); it++)
+						while (instances.size() > 0)
 						{
-							delete (*it);
-
+							Client* threadData = instances.back();
 							instances.pop_back();
+
+							delete (threadData);
 						}
 					}
 
 					Http::Http::CleanUp();
 
 					inited = false;
+
+					LeaveCriticalSection(&staticQueueLock);
+
+					DeleteCriticalSection(&staticQueueLock);
 				}
 
 				bool Client::Run(APIResponsePackages* packages)
@@ -95,6 +109,7 @@ namespace raincious
 					APIResponses responses;
 					Instances::iterator instanceIter;
 					bool skip = false;
+					bool result = true;
 
 					for (instanceIter = instances.begin(); instanceIter != instances.end(); instanceIter++)
 					{
@@ -104,7 +119,7 @@ namespace raincious
 						switch (status)
 						{
 						case PERIOD_LIMIT:
-							return false; // False for retry
+							result = false; // False for retry
 							break;
 
 						default:
@@ -120,7 +135,7 @@ namespace raincious
 						}
 					}
 
-					return true;
+					return result;
 				}
 
 				Client::Client(APILogin client, APIServer &serverInfo)
@@ -675,8 +690,6 @@ namespace raincious
 
 					if (currentTime < (clock_t)(server.LastSent + server.Delay))
 					{
-						printError(L"Period limit, wait a bit");
-
 						return PERIOD_LIMIT;
 					}
 					

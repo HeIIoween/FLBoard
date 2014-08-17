@@ -108,6 +108,7 @@ namespace raincious
 
 					Queue sendingQueue;
 
+					static CRITICAL_SECTION staticQueueLock;
 					CRITICAL_SECTION queueSycLock;
 
 					uint skips;
