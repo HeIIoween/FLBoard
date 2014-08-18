@@ -146,6 +146,8 @@ namespace raincious
 						Sleep(100); // Take a nap
 					}
 
+					delete data;
+
 					_endthreadex(0);
 
 					return 0;
@@ -235,8 +237,6 @@ namespace raincious
 						// Free the thread handles
 						CloseHandle(threadData->WaitEvent);
 						CloseHandle(threadData->Thread);
-
-						delete threadData; // Delete the data container it self
 					}
 
 					LeaveCriticalSection(&instanceOptLock);
