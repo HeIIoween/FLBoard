@@ -24,6 +24,7 @@ namespace raincious
 						typedef vector <Worker*> Instances;
 
 						static bool inited;
+						static bool stopping;
 
 						static CRITICAL_SECTION staticOptLock;
 

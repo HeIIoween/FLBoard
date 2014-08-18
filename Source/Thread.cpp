@@ -19,6 +19,7 @@ namespace raincious
 			namespace Thread
 			{
 				bool Worker::inited = false;
+				bool Worker::stopping = false;
 				CRITICAL_SECTION Worker::staticOptLock;
 				Worker::Instances Worker::instances;
 
@@ -30,6 +31,8 @@ namespace raincious
 
 						InitializeCriticalSection(&staticOptLock);
 					}
+
+					stopping = false;
 
 					EnterCriticalSection(&staticOptLock);
 
@@ -48,6 +51,13 @@ namespace raincious
 					{
 						return;
 					}
+
+					if (stopping)
+					{
+						return;
+					}
+
+					stopping = true;
 
 					EnterCriticalSection(&staticOptLock);
 
@@ -69,6 +79,11 @@ namespace raincious
 					Instances::iterator iter;
 
 					if (!inited)
+					{
+						return;
+					}
+
+					if (stopping)
 					{
 						return;
 					}
@@ -206,7 +221,7 @@ namespace raincious
 							printError(L"Shutdown signal has sent");
 						}
 
-						switch (WaitForSingleObject(threadData->Thread, INFINITE))
+						switch (WaitForSingleObject(threadData->Thread, MAX_THREAD_CLOSE_WAITING_TIME))
 						{
 						case WAIT_OBJECT_0:
 							printError(L"Thread closed");

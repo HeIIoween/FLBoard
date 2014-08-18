@@ -20,8 +20,10 @@ namespace raincious
 			{
 				// Client
 				Client::Instances Client::instances;
+				
 				CRITICAL_SECTION Client::staticQueueLock;
 				bool Client::inited = false;
+				bool Client::releasing = false;
 
 				APIServer Client::Get(APILogin clientLogin)
 				{
@@ -57,6 +59,11 @@ namespace raincious
 						return;
 					}
 
+					if (releasing)
+					{
+						return;
+					}
+
 					for (it = instances.begin(); it != instances.end(); it++)
 					{
 						if (!(*it)->addQueue(data))
@@ -65,7 +72,8 @@ namespace raincious
 						}
 					}
 
-					if (!addFailed)
+					// Do a dobule check, the value of releasing may changed during time.
+					if (!addFailed && !releasing)
 					{
 						Thread::Worker::Activate();
 					}
@@ -80,6 +88,8 @@ namespace raincious
 						// Release my axx, you don't even inited.
 						return;
 					}
+
+					releasing = true;
 
 					EnterCriticalSection(&staticQueueLock);
 

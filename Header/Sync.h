@@ -116,6 +116,7 @@ namespace raincious
 					uint skips;
 
 					static bool inited;
+					static bool releasing;
 
 					static Instances instances;
 
