@@ -65,7 +65,7 @@ namespace raincious
 						}
 					}
 
-					if (addFailed)
+					if (!addFailed)
 					{
 						Thread::Worker::Activate();
 					}
