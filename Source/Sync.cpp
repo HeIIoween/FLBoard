@@ -38,6 +38,8 @@ namespace raincious
 						InitializeCriticalSection(&staticQueueLock);
 					}
 
+					releasing = false;
+
 					EnterCriticalSection(&staticQueueLock);
 
 					Client* client = new Client(clientLogin, serverInfo);
