@@ -93,23 +93,13 @@ namespace raincious
 
 					while ((*data).Keep)
 					{
+						(*data).Busy = false;
+
 						// Guard thread will always run
-						if ((*data).Guard)
-						{
-							(*data).Busy = false;
+						// If it's not a Guarder, make it run when needed
+						WaitForSingleObject((*data).WaitEvent, (*data).Guard ? MAX_THREAD_RUN_DELAY : INFINITE);
 
-							WaitForSingleObject((*data).WaitEvent, MAX_THREAD_RUN_DELAY);
-
-							(*data).Busy = true;
-						}
-						else // If it's not a Guarder, make it run when needed
-						{
-							(*data).Busy = false;
-
-							WaitForSingleObject((*data).WaitEvent, INFINITE);
-
-							(*data).Busy = true;
-						}
+						(*data).Busy = true;
 
 						// Double check the close, because the thread may get it before or after task
 						if (!(*data).Keep)
@@ -117,8 +107,6 @@ namespace raincious
 							// Thread be like: bye bye
 							break;
 						}
-
-						// No one uses (*data) again below this line.
 
 						Sync::APIResponsePackages packages;
 
@@ -129,7 +117,7 @@ namespace raincious
 						{
 							try
 							{
-								Sync::Listener::Run(packages);
+								Sync::Listener::Run(packages, (*data).Keep);
 							}
 							catch (exception &e)
 							{
@@ -152,6 +140,7 @@ namespace raincious
 				{
 					killing = false;
 					uint threadOpenLoop;
+					multiThreads = false;
 
 					InitializeCriticalSection(&instanceOptLock);
 
@@ -174,7 +163,7 @@ namespace raincious
 						(*threadData).Busy = false;
 
 						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
-						(*threadData).Thread = (HANDLE)_beginthreadex(0, 0, &Thread, threadData, 0, NULL);
+						(*threadData).Thread = (HANDLE)_beginthreadex(NULL, 0, &Thread, threadData, 0, NULL);
 
 						openedThreads.push_back(threadData);
 
@@ -212,15 +201,19 @@ namespace raincious
 
 							continue;
 						}
+						else
+						{
+							printError(L"Shutdown signal has sent");
+						}
 
-						switch (WaitForSingleObject(threadData->Thread, MAX_THREAD_CLOSE_WAITING_TIME))
+						switch (WaitForSingleObject(threadData->Thread, INFINITE))
 						{
 						case WAIT_OBJECT_0:
 							printError(L"Thread closed");
 							break;
 
 						default:
-							printError(L"Encountered a problem when trying to close thread");
+							printError(L"Thread not closed as excepted");
 							break;
 						}
 
@@ -228,7 +221,7 @@ namespace raincious
 						CloseHandle(threadData->WaitEvent);
 						CloseHandle(threadData->Thread);
 
-						delete (threadData); // Delete the data container it self
+						delete threadData; // Delete the data container it self
 					}
 
 					LeaveCriticalSection(&instanceOptLock);

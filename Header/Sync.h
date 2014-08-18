@@ -1,5 +1,6 @@
 #include <queue>
 #include <map>
+#include <set>
 
 #include "Http.h"
 #include "Verify.h"
@@ -105,6 +106,7 @@ namespace raincious
 					APILogin loginInfo;
 					APIServer server;
 					bool enabled;
+					bool loggedIn;
 
 					Queue sendingQueue;
 
@@ -122,7 +124,7 @@ namespace raincious
 					
 					void setJsonCommonHeader(Http::HttpHandler& http);
 
-					void addQueue(DataItem data);
+					bool addQueue(DataItem data);
 					APIResponseStatus sendQueue(APIResponses* responses);
 
 					APIResponseStatus sync(Json::Value root, APIResponses* responses, bool noRetry = false);
@@ -137,10 +139,17 @@ namespace raincious
 				{
 				public:
 					static void Listen(string eventName, EventCallback eventCallback);
-					static void Run(APIResponsePackages &packages);
+					static void Unlisten(string eventName, EventCallback eventCallback);
+					static void Run(APIResponsePackages &packages, bool &withDelay);
 
 				protected:
-					typedef vector <EventCallback> EventHandlers;
+					typedef map <EventCallback, CRITICAL_SECTION> CallingLock;
+					typedef set <EventCallback> CallableCallback;
+
+					static CallingLock callingLock;
+					static CallableCallback callable;
+
+					typedef list <EventCallback> EventHandlers;
 
 					typedef struct EventHandler 
 					{
@@ -151,9 +160,9 @@ namespace raincious
 
 					static Events events;
 
-					static void trigger(wstring source, string eventName, Data::Parameter response);
+					static void trigger(wstring source, string eventName, Data::Parameter response, double &totalTime, bool &withDelay);
 
-					static void Listener::printError(wstring error);
+					static void printError(wstring error);
 				};
 			}
 		}

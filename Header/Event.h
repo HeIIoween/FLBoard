@@ -24,6 +24,9 @@ namespace raincious
 				// Add a new event listener
 				EXPORT void Listen(string eventName, EventCallback callback);
 
+				// Remove a existing event listener
+				EXPORT void Unlisten(string eventName, EventCallback callback);
+
 				// Request data sync to available APIs acordding to setting
 				EXPORT void Send(string type, EventData data);
 

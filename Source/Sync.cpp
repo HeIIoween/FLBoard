@@ -49,6 +49,7 @@ namespace raincious
 
 				void Client::Send(DataItem data)
 				{
+					bool addFailed = false;
 					Instances::iterator it;
 
 					if (!inited)
@@ -58,10 +59,16 @@ namespace raincious
 
 					for (it = instances.begin(); it != instances.end(); it++)
 					{
-						(*it)->addQueue(data);
+						if (!(*it)->addQueue(data))
+						{
+							addFailed = true;
+						}
 					}
 
-					Thread::Worker::Activate();
+					if (addFailed)
+					{
+						Thread::Worker::Activate();
+					}
 				}
 
 				void Client::Release()
@@ -80,10 +87,10 @@ namespace raincious
 					{
 						while (instances.size() > 0)
 						{
-							Client* threadData = instances.back();
+							Client* instance = instances.back();
 							instances.pop_back();
 
-							delete (threadData);
+							delete instance;
 						}
 					}
 
@@ -103,13 +110,13 @@ namespace raincious
 						return true;
 					}
 
-					APIResponses responses;
 					Instances::iterator instanceIter;
 					bool skip = false;
 					bool result = true;
 
 					for (instanceIter = instances.begin(); instanceIter != instances.end(); instanceIter++)
 					{
+						APIResponses responses;
 						APIResponsePackage package;
 						APIResponseStatus status = (*instanceIter)->sendQueue(&responses);
 
@@ -197,6 +204,7 @@ namespace raincious
 					else
 					{
 						serverInfo = server;
+						loggedIn = true;
 						enabled = true;
 
 						// Want to read token don't you?
@@ -211,6 +219,9 @@ namespace raincious
 					enabled = false; // Disable sync
 
 					EnterCriticalSection(&queueSycLock);
+
+					Queue e;
+					swap(sendingQueue, e);
 
 					LeaveCriticalSection(&queueSycLock);
 
@@ -359,20 +370,17 @@ namespace raincious
 
 						server.QueueLimit = SYNC_CLIENT_DEFAULT_QUEUE;
 					}
-					else
+					else if (loginInfo.Queue > 0 && server.QueueLimit > loginInfo.Queue)
 					{
-						if (loginInfo.Queue > 0 && server.QueueLimit > loginInfo.Queue)
-						{
-							printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using " + Encode::stringToWstring(itos(loginInfo.Queue)) + L" as maximum");
+						printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using " + Encode::stringToWstring(itos(loginInfo.Queue)) + L" as maximum");
 
-							server.QueueLimit = loginInfo.Queue;
-						}
-						else if (server.QueueLimit > SYNC_CLIENT_MAX_QUEUE)
-						{
-							printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using maximum as limit");
+						server.QueueLimit = loginInfo.Queue;
+					}
+					else if (server.QueueLimit > SYNC_CLIENT_MAX_QUEUE)
+					{
+						printError(L"Queue " + Encode::stringToWstring(itos(server.QueueLimit)) + L" greater than limit, using maximum as limit");
 
-							server.QueueLimit = SYNC_CLIENT_MAX_QUEUE;
-						}
+						server.QueueLimit = SYNC_CLIENT_MAX_QUEUE;
 					}
 
 					printError(L"Logged in");
@@ -390,7 +398,7 @@ namespace raincious
 
 					setJsonCommonHeader(http);
 
-					if (!enabled) 
+					if (!loggedIn) 
 					{
 						return FAILED_LOGIN;
 					}
@@ -517,7 +525,7 @@ namespace raincious
 					case 403:
 						if (noRetry)
 						{
-							printError(L"Synchronizing, but token not working any more, tried relogin but failed. Dropped.");
+							printError(L"Synchronizing, but token not working any more. Tried relogin but failed. Dropped.");
 
 							return FAILED_LOGIN;
 						}
@@ -643,7 +651,7 @@ namespace raincious
 					return SUCCEED;
 				}
 
-				void Client::addQueue(DataItem data)
+				bool Client::addQueue(DataItem data)
 				{
 					uint qLength = 0;
 
@@ -651,9 +659,9 @@ namespace raincious
 					{
 						printError(L"Disabled, can't add queue to this API.");
 
-						return;
+						return false;
 					}
-
+					
 					EnterCriticalSection(&queueSycLock);
 
 					qLength = sendingQueue.size();
@@ -668,6 +676,8 @@ namespace raincious
 					sendingQueue.push(data);
 
 					LeaveCriticalSection(&queueSycLock);
+
+					return true;
 				}
 
 				APIResponseStatus Client::sendQueue(APIResponses* responses)
@@ -751,25 +761,53 @@ namespace raincious
 
 				// Listener
 				Listener::Events Listener::events;
+				Listener::CallingLock Listener::callingLock;
+				Listener::CallableCallback Listener::callable;
 
 				void Listener::Listen(string eventName, EventCallback eventCallback)
 				{
+					InitializeCriticalSection(&callingLock[eventCallback]);
+
+					EnterCriticalSection(&callingLock[eventCallback]);
+
 					events[eventName].Handlers.push_back(eventCallback);
 
-					return;
+					callable.insert(eventCallback);
+
+					LeaveCriticalSection(&callingLock[eventCallback]);
+
+					printError(L"Callback added for " + wstring(eventName.begin(), eventName.end()));
 				}
 
-				void Listener::Run(Sync::APIResponsePackages &packages)
+				void Listener::Unlisten(string eventName, EventCallback eventCallback)
+				{
+					EnterCriticalSection(&callingLock[eventCallback]);
+
+					CallableCallback::iterator iter = callable.find(eventCallback);
+
+					if (iter != callable.end())
+					{
+						callable.erase(iter);
+					}
+
+					events[eventName].Handlers.remove(eventCallback);
+
+					LeaveCriticalSection(&callingLock[eventCallback]);
+
+					DeleteCriticalSection(&callingLock[eventCallback]);
+
+					printError(L"Callback released for " + wstring(eventName.begin(), eventName.end()));
+				}
+
+				void Listener::Run(Sync::APIResponsePackages &packages, bool &withDelay)
 				{
 					uint listenerCalls = 0;
-					double startTime = 0, finishTime = 0; // Can't use clock_t, or you get X000ms
+					double totalTime = 0, groupRunTime = 0;
 					APIResponses::iterator responsesIter;
 					APIResponsePackages::iterator packageIter;
-					wstringstream wss, wsss;
+					wstringstream wss;
 
 					printError(L"Calling response handlers");
-
-					startTime = clock();
 
 					for (packageIter = packages.begin(); packageIter != packages.end(); packageIter++)
 					{
@@ -779,7 +817,9 @@ namespace raincious
 						{
 							Data::Parameter parameter(responsesIter->Data);
 
-							trigger((*packageIter).API, responsesIter->Type, parameter);
+							trigger((*packageIter).API, responsesIter->Type, parameter, groupRunTime, withDelay);
+
+							totalTime += groupRunTime;
 
 							listenerCalls++;
 						}
@@ -787,12 +827,10 @@ namespace raincious
 						printError(L"Finished");
 					}
 
-					finishTime = clock();
-
 					wss << L"All ";
 					wss << listenerCalls;
 					wss << L" handlers finished in ";
-					wss << (((finishTime - startTime) / CLOCKS_PER_SEC) * 1000) - (listenerCalls * 100); // -100 for sleep time cost
+					wss << ((totalTime) / CLOCKS_PER_SEC) * 1000;
 					wss << L"ms";
 
 					printError(wss.str());
@@ -800,8 +838,10 @@ namespace raincious
 					return;
 				}
 
-				void Listener::trigger(wstring source, string eventName, Data::Parameter response)
+				void Listener::trigger(wstring source, string eventName, Data::Parameter response, double &totalTime, bool &withDelay)
 				{
+					double startTime = 0, finishTime = 0; // Can't use clock_t, or you get X000ms
+
 					Events::iterator eventIter = events.find(eventName);
 
 					if (eventIter == events.end()) {
@@ -811,14 +851,33 @@ namespace raincious
 					EventHandlers::iterator eHandlerIter;
 					for (eHandlerIter = events[eventName].Handlers.begin(); eHandlerIter != events[eventName].Handlers.end(); eHandlerIter++)
 					{
+						EnterCriticalSection(&callingLock[*eHandlerIter]);
+
 						printError(L"+ Firing for " + wstring(eventName.begin(), eventName.end()));
 
-						(*eHandlerIter)(source, response);
+						startTime = clock();
 
-						printError(L"- Fired");
+						if (callable.find(*eHandlerIter) != callable.end())
+						{
+							(*eHandlerIter)(source, response);
 
-						// We in thread, so we can sleep a little, let CPU do some other things.
-						Sleep(100);
+							printError(L"- Fired");
+						}
+						else
+						{
+							printError(L"- ! Unfireable");
+						}
+
+						finishTime = clock();
+
+						totalTime = finishTime - startTime;
+
+						LeaveCriticalSection(&callingLock[*eHandlerIter]);
+
+						if (withDelay)
+						{
+							Sleep(100);
+						}
 					}
 				}
 

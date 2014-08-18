@@ -18,6 +18,11 @@ namespace raincious
 					Sync::Listener::Listen(eventName, callback);
 				}
 
+				EXPORT void Unlisten(string eventName, EventCallback callback)
+				{
+					Sync::Listener::Unlisten(eventName, callback);
+				}
+
 				EXPORT void Send(string type, EventData data)
 				{
 					EventData::iterator dIter;
@@ -74,6 +79,10 @@ namespace raincious
 								else if (ini.is_value("Secret"))
 								{
 									login.Secret = Misc::Encode::stringToInt(ini.get_value_string(0));
+								}
+								else if (ini.is_value("Queue"))
+								{
+									login.Queue = ini.get_value_int(0);
 								}
 								else if (ini.is_value("Operation"))
 								{
