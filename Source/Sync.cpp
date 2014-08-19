@@ -517,7 +517,7 @@ namespace raincious
 					sendParameter["Task"] = "Sync";
 					sendParameter["Token"] = server.Token;
 					sendParameter["Cecret"] = verifyer.gen();
-					sendParameter["Data"] = root;
+					sendParameter["Datas"] = root;
 
 					Http::Post http(loginInfo.URI);
 
