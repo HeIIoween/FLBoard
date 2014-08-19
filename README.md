@@ -424,3 +424,5 @@ in the sync request send by API server.
 Notice you can import [API] sections from your plugin configuration directly to Board Plugin by calling
 
 	Event::Import(scPluginCfgFile, true);
+
+Board will load your config file and add the API into running queue.

@@ -101,9 +101,7 @@ namespace raincious
 				unsigned __stdcall Worker::Thread(void *threadData)
 				{
 					double startTime = 0, endTime = 0;
-					uint nextSleep = 1;
 					string errMsg = "";
-					bool leisurelyFinish = false;
 					
 					ThreadData* data = (ThreadData*)threadData;
 
@@ -113,42 +111,55 @@ namespace raincious
 
 						// Guard thread will always run
 						// If it's not a Guarder, make it run when needed
-						WaitForSingleObject((*data).WaitEvent, ((*data).Guard && !(*data).Closing ? MAX_THREAD_RUN_DELAY : INFINITE));
-
-						// Give a little time to CPU
-						Sleep(100);
+						WaitForSingleObject(
+							(*data).Closing ? (*data).CloseEvent : (*data).WaitEvent,
+							(!(*data).Guard || (*data).Closing ? INFINITE : MAX_THREAD_RUN_DELAY)
+						);
+						
+						(*data).Busy = true;
 
 						// Double check the close, because the thread may get it before or after task
 						if (!(*data).Keep)
 						{
+							Sleep(150);
+
 							// Thread be like: bye bye
 							break;
 						}
 
-						(*data).Busy = true;
-
-						Sync::APIResponsePackages packages;
-
-						Sync::Client::Run(&packages);
-
-						// Try handle data no matter what Sycn runners says
-						if (packages.size() > 0)
+						if (!(*data).Closing)
 						{
-							try
-							{
-								Sync::Listener::Run(packages, (*data).Closing);
-							}
-							catch (exception &e)
-							{
-								errMsg = "[Board] At least one Response Task callback rans and failed: ";
-								errMsg.append(e.what());
+							Sync::APIResponsePackages packages;
 
-								AddLog(errMsg.c_str());
+							Sync::Client::Run(&packages);
+
+							// Try handle data no matter what Sycn runners says
+							if (packages.size() > 0)
+							{
+								try
+								{
+									Sync::Listener::Run(packages, (*data).Closing);
+								}
+								catch (exception &e)
+								{
+									errMsg = "[Board] At least one Response Task callback rans and failed: ";
+									errMsg.append(e.what());
+
+									AddLog(errMsg.c_str());
+								}
 							}
 						}
 
 						Sleep(100); // Take a nap
 					}
+
+					// Wait for CPU
+					Sleep(200);
+
+					// Free the thread handles
+					CloseHandle((*data).WaitEvent);
+					CloseHandle((*data).CloseEvent);
+					CloseHandle((*data).Thread);
 
 					delete data;
 
@@ -185,6 +196,7 @@ namespace raincious
 						(*threadData).Closing = false;
 
 						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
+						(*threadData).CloseEvent = CreateEvent(NULL, true, false, NULL);
 						(*threadData).Thread = (HANDLE)_beginthreadex(NULL, 0, &Thread, threadData, 0, NULL);
 
 						openedThreads.push_back(threadData);
@@ -214,27 +226,25 @@ namespace raincious
 						openedThreads.pop_back();
 
 						// Only close thread when it's not busy
-						if ((*threadData).Busy)
+						if ((*threadData).Busy || !(*threadData).Closing)
 						{
 							(*threadData).Closing = true;
 
+							// Bring it back
+							SetEvent((*threadData).WaitEvent);
+
 							openedThreads.push_front(threadData);
 
-							printError(L"Skipped for next round as thread currently busy");
-
-							Sleep(1000);
+							Sleep(100);
 
 							continue;
 						}
 
 						(*threadData).Keep = false;
 
-						if (!SetEvent((*threadData).WaitEvent))
+						if (!SetEvent((*threadData).CloseEvent))
 						{
 							printError(L"Try sending shutdown to thread, but failed");
-
-							// Do a close here too
-							CloseHandle((*threadData).WaitEvent);
 
 							continue;
 						}
@@ -253,10 +263,6 @@ namespace raincious
 							printError(L"Thread not closed as excepted");
 							break;
 						}
-
-						// Free the thread handles
-						CloseHandle((*threadData).WaitEvent);
-						CloseHandle((*threadData).Thread);
 					}
 
 					LeaveCriticalSection(&instanceOptLock);

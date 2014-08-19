@@ -41,6 +41,7 @@ namespace raincious
 							bool Keep;
 							bool Busy;
 							HANDLE WaitEvent;
+							HANDLE CloseEvent;
 							HANDLE Thread;
 						} threadData;
 
