@@ -141,7 +141,7 @@ namespace raincious
 				public:
 					static void Listen(string eventName, EventCallback eventCallback);
 					static void Unlisten(string eventName, EventCallback eventCallback);
-					static void Run(APIResponsePackages &packages, bool &withDelay);
+					static void Run(APIResponsePackages &packages, bool &noDelay);
 
 				protected:
 					typedef map <EventCallback, CRITICAL_SECTION> CallingLock;
@@ -161,7 +161,7 @@ namespace raincious
 
 					static Events events;
 
-					static void trigger(wstring source, string eventName, Data::Parameter response, double &totalTime, bool &withDelay);
+					static void trigger(wstring source, string eventName, Data::Parameter response, double &totalTime, bool &noDelay);
 
 					static void printError(wstring error);
 				};

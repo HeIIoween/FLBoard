@@ -811,7 +811,7 @@ namespace raincious
 					printError(L"Callback released for " + wstring(eventName.begin(), eventName.end()));
 				}
 
-				void Listener::Run(Sync::APIResponsePackages &packages, bool &withDelay)
+				void Listener::Run(Sync::APIResponsePackages &packages, bool &noDelay)
 				{
 					uint listenerCalls = 0;
 					double totalTime = 0, groupRunTime = 0;
@@ -829,7 +829,7 @@ namespace raincious
 						{
 							Data::Parameter parameter(responsesIter->Data);
 
-							trigger((*packageIter).API, responsesIter->Type, parameter, groupRunTime, withDelay);
+							trigger((*packageIter).API, responsesIter->Type, parameter, groupRunTime, noDelay);
 
 							totalTime += groupRunTime;
 
@@ -850,7 +850,7 @@ namespace raincious
 					return;
 				}
 
-				void Listener::trigger(wstring source, string eventName, Data::Parameter response, double &totalTime, bool &withDelay)
+				void Listener::trigger(wstring source, string eventName, Data::Parameter response, double &totalTime, bool &noDelay)
 				{
 					double startTime = 0, finishTime = 0; // Can't use clock_t, or you get X000ms
 
@@ -886,7 +886,7 @@ namespace raincious
 
 						LeaveCriticalSection(&callingLock[*eHandlerIter]);
 
-						if (withDelay)
+						if (!noDelay)
 						{
 							Sleep(100);
 						}

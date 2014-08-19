@@ -37,13 +37,14 @@ namespace raincious
 						typedef struct ThreadData
 						{
 							bool Guard;
+							bool Closing;
 							bool Keep;
 							bool Busy;
 							HANDLE WaitEvent;
 							HANDLE Thread;
 						} threadData;
 
-						typedef vector <ThreadData*> ThreadDatas;
+						typedef list <ThreadData*> ThreadDatas;
 
 						ThreadDatas openedThreads;
 						bool multiThreads;

@@ -103,18 +103,20 @@ namespace raincious
 					double startTime = 0, endTime = 0;
 					uint nextSleep = 1;
 					string errMsg = "";
+					bool leisurelyFinish = false;
 					
 					ThreadData* data = (ThreadData*)threadData;
 
-					while ((*data).Keep)
+					while (true)
 					{
 						(*data).Busy = false;
 
 						// Guard thread will always run
 						// If it's not a Guarder, make it run when needed
-						WaitForSingleObject((*data).WaitEvent, (*data).Guard ? MAX_THREAD_RUN_DELAY : INFINITE);
+						WaitForSingleObject((*data).WaitEvent, ((*data).Guard && !(*data).Closing ? MAX_THREAD_RUN_DELAY : INFINITE));
 
-						(*data).Busy = true;
+						// Give a little time to CPU
+						Sleep(100);
 
 						// Double check the close, because the thread may get it before or after task
 						if (!(*data).Keep)
@@ -122,6 +124,8 @@ namespace raincious
 							// Thread be like: bye bye
 							break;
 						}
+
+						(*data).Busy = true;
 
 						Sync::APIResponsePackages packages;
 
@@ -132,7 +136,7 @@ namespace raincious
 						{
 							try
 							{
-								Sync::Listener::Run(packages, (*data).Keep);
+								Sync::Listener::Run(packages, (*data).Closing);
 							}
 							catch (exception &e)
 							{
@@ -178,6 +182,7 @@ namespace raincious
 						
 						(*threadData).Keep = true;
 						(*threadData).Busy = false;
+						(*threadData).Closing = false;
 
 						(*threadData).WaitEvent = CreateEvent(NULL, true, false, NULL);
 						(*threadData).Thread = (HANDLE)_beginthreadex(NULL, 0, &Thread, threadData, 0, NULL);
@@ -196,25 +201,40 @@ namespace raincious
 				}
 
 				Worker::~Worker() {
+					killing = true;
+
 					EnterCriticalSection(&instanceOptLock);
 
-					killing = true;
-					
 					printError(L"Closing thread. It may take few minutes");
 
 					while (openedThreads.size() > 0)
 					{
 						ThreadData* threadData = openedThreads.back();
+
 						openedThreads.pop_back();
 
-						threadData->Keep = false;
+						// Only close thread when it's not busy
+						if ((*threadData).Busy)
+						{
+							(*threadData).Closing = true;
 
-						if (!SetEvent(threadData->WaitEvent))
+							openedThreads.push_front(threadData);
+
+							printError(L"Skipped for next round as thread currently busy");
+
+							Sleep(1000);
+
+							continue;
+						}
+
+						(*threadData).Keep = false;
+
+						if (!SetEvent((*threadData).WaitEvent))
 						{
 							printError(L"Try sending shutdown to thread, but failed");
 
 							// Do a close here too
-							CloseHandle(threadData->WaitEvent);
+							CloseHandle((*threadData).WaitEvent);
 
 							continue;
 						}
@@ -223,7 +243,7 @@ namespace raincious
 							printError(L"Shutdown signal has sent");
 						}
 
-						switch (WaitForSingleObject(threadData->Thread, MAX_THREAD_CLOSE_WAITING_TIME))
+						switch (WaitForSingleObject((*threadData).Thread, MAX_THREAD_CLOSE_WAITING_TIME))
 						{
 						case WAIT_OBJECT_0:
 							printError(L"Thread closed");
@@ -235,8 +255,8 @@ namespace raincious
 						}
 
 						// Free the thread handles
-						CloseHandle(threadData->WaitEvent);
-						CloseHandle(threadData->Thread);
+						CloseHandle((*threadData).WaitEvent);
+						CloseHandle((*threadData).Thread);
 					}
 
 					LeaveCriticalSection(&instanceOptLock);
