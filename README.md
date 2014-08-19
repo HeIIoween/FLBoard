@@ -189,7 +189,7 @@ Same as the one in Login process.
 
 Sync request use to send data to API, and get data feedback in same time.
 
-Sync request will be send when a plugin added data in sending queue by calling exported Event::Send() function.
+Sync request will be send when a plugin added data in sending queue by calling exported `Event::Send()` function.
 
 #### FLServer side ####
 
@@ -307,7 +307,7 @@ The type of this task queue item.
 
 It uses as the key of FLServer responser.
 
-Plugin creator needs to Listen request by bind a Callback function using Event::Listen(). Board plugin will automactially call the callback function one by one with received that type of task request item.
+Plugin creator needs to Listen request by bind a Callback function using `Event::Listen()`. Board plugin will automactially call the callback function one by one when received that type of task request item.
 
 ###### Data (object) ######
 
