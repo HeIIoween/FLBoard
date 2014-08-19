@@ -373,7 +373,7 @@ What the data with this type we can send to API server. The value will be equals
 
 in the sync request send by FLServer.
 
-**Notice: If no Response has set for this API, Board will take all as accepted.**
+**Notice: If there is no Operation has set for this API, Board will take all as accepted.**
 
 #### Response ####
 
@@ -391,7 +391,7 @@ What data types received from API server we will handle. The value will be equal
 
 in the sync request send by API server.
 
-**Notice: If no Response has set for this API, Board will take all as accepted.**
+**Notice: If there is no Response has set for this API, Board will take all as accepted.**
 
 ### Example of configuration file ###
 
