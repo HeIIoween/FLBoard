@@ -26,7 +26,7 @@ All communication based on this protocol which made with 3 basic type of instruc
 
 #### FLServer side ####
 
-When your FLServer has been boot up, Board will automatically send login signal to your FLServer as follow:
+When your FLServer has been boot up, Board will automatically send login signal to your API server as follow:
 
 	{
 		"Task": "Login",
