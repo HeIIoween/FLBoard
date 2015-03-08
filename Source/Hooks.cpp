@@ -12,6 +12,8 @@ namespace HkIServerImpl
 {
 	void __stdcall Shutdown()
 	{
+		returncode = DEFAULT_RETURNCODE;
+
 		Main::PluginShutdown();
 	}
 }
